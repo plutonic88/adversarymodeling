@@ -13,7 +13,7 @@ public class Main {
 		//System.out.println("Hello world");
 		
 		HashMap<String, HashMap<String, Double>> strategy = Data.readStrategy("g5d5_FI.txt");
-		double ex = AdversaryModel.computeEx("2", 1, 5, strategy);
+		double ex = AdversaryModel.computeEx("2", 0, 4, strategy);
 		
 	}
 	

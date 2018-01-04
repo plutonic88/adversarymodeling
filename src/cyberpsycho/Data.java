@@ -119,7 +119,7 @@ public class Data {
 			
 			
 
-			for (int i=87; i<unparseddata.size(); )  
+			for (int i=0; i<unparseddata.size(); )  
 			{
 				
 				if(i==39614)
@@ -165,11 +165,6 @@ public class Data {
 								
 								//System.out.println("Action sequence "+ subs);
 								
-
-								
-
-								
-
 								if(row.charAt(0) == 'D')
 								{
 									def_seq = subs;
@@ -259,9 +254,16 @@ public class Data {
 					att_seq =  String.join(",", att_nodes_seq);
 					
 					
+					if(def_seq.equals("null") || att_seq.equals("null"))
+					{
+						strategy.put("EMPTY"+" "+"EMPTY", bhv_strat);
+					}
+					else
+					{
+						strategy.put(def_seq+" "+att_seq, bhv_strat);
+					}
 					
 					
-					strategy.put(def_seq+" "+att_seq, bhv_strat);
 					
 					System.out.println();
 				
