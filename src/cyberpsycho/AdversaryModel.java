@@ -51,7 +51,7 @@ public class AdversaryModel {
 
 					//System.out.println("tmp_def_prev_seq "+ tmp_def_prev_seq+"   tmp_att_prev_seq "+ tmp_att_prev_seq);
 
-					if(att_prevseq.compareTo(tmp_att_prev_seq)==0 && def_prevseq.compareTo(tmp_def_prev_seq)==0)
+					if(att_prevseq.compareTo(tmp_att_prev_seq)==0 && def_prevseq.compareTo(tmp_def_prev_seq) == 0)
 					{
 
 						sequences.add(seq);
