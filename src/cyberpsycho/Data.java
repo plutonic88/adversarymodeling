@@ -16,7 +16,59 @@ public class Data {
 	
 	
 	public enum Headers {
-		instance,round,Subject_ID,user_id,id_assignedgames,id_answers,id_endsurveys,Mean_Inst,N_Inst,SD_Inst,Sum_Inst,m1,m2,m3,m4,m5,m6,m7,m8,m9,n1,n2,n3,n4,n5,n6,n7,n8,n9,p1,p2,p3,p4,p5,p6,p7,p8,p9,gender,age,country,race,education,income,device,comment,game_type,pick_def_order,game_played,random_defender_type,max_defender_type,game_id,total_point,user_confirmation,defender_points,created_at_assignedsurveys,created_at_answers,updated_at_answers,created_at_endsurveys,updated_at_endsurveys,id,defender_action,time_defender_moved,attacker_action,time_attacker_moved,attacker_points,created_at_date,created_at_time,updated_at_date,updated_at_time
+		instance(0),round(1),Subject_ID(2),user_id(3),id_assignedgames(4),id_answers(5),id_endsurveys(6),Mean_Inst(7),N_Inst(8),SD_Inst(9),
+		Sum_Inst(10),m1(11),m2(12),m3(13),m4(14),m5(15),m6(16),m7(17),m8(18),m9(19),n1(20),
+		n2(21),n3(22),n4(23),n5(24),n6(25),n7(26),n8(27),n9(28),p1(29),p2(30),p3(31),p4(32),p5(33),p6(34),p7(35),
+		p8(36),p9(37),gender(38),age(39),country(40),race(41),education(42),income(43),device(44),comment(45),game_type(46),
+		pick_def_order(47),game_played(48),random_defender_type(49),max_defender_type(50),game_id(51),total_point(52),user_confirmation(53),defender_points(54),
+		created_at_assignedsurveys(55),created_at_answers(56),updated_at_answers(57),created_at_endsurveys(58),
+		updated_at_endsurveys(59),id(60),defender_action(61),time_defender_moved(62),attacker_action(63),time_attacker_moved(64),
+		attacker_points(65),created_at_date(66),created_at_time(67),updated_at_date(68),updated_at_time(69);
+		
+		private final int value;
+		
+		private Headers(int value)
+		{
+	        this.value = value;
+	    }
+		
+		public int getValue() {
+	        return value;
+	    }
+	}
+	
+	
+	/**
+	 * example.add(user_id);
+				example.add(game_id);
+				example.add(game_instance);
+				example.add(game_type);
+				example.add(pick_def_order);
+				example.add(game_played);
+				
+				
+				example.add(round);
+				example.add(defender_action);
+				example.add(attacker_action);
+				example.add(attacker_points);
+				example.add(total_points);
+	 * @author anjonsunny
+	 *
+	 */
+	
+	public enum Headers_minimum {
+		user_id(0), game_id(1), game_instance(2),game_type(3), pick_def_order(4), game_played(5), round(6), defender_action(7), attacker_action(8), attacker_points(9), total_points(10);
+		
+		private final int value;
+		
+		private Headers_minimum(int value)
+		{
+	        this.value = value;
+	    }
+		
+		public int getValue() {
+	        return value;
+	    }
 	}
 
 
