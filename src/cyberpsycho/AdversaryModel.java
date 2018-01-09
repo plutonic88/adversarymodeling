@@ -180,9 +180,21 @@ public class AdversaryModel {
 	}
 
 
-	public static double computeExpectedPayoff(String action, int round, int LIMIT_ROUND, HashMap<String,String> att_sequences, HashMap<String,String> def_sequences, HashMap<String,Integer> rewards,HashMap<String, HashMap<String, Double>> strategy)
+	/**
+	 * consider defender and attacker previous sequences
+	 * for attacker consider action a in round
+	 * @param action
+	 * @param round
+	 * @param LIMIT_ROUND
+	 * @param att_sequences
+	 * @param def_sequences
+	 * @param rewards
+	 * @param strategy
+	 * @return
+	 */
+	public static double computeExpectedPayoffFullInfo(String action, int round, int LIMIT_ROUND, HashMap<String,String> att_sequences, HashMap<String,String> def_sequences, HashMap<String,Integer> rewards,HashMap<String, HashMap<String, Double>> strategy)
 	{
-		double expectedutility = 0.0;
+		//double expectedutility = 0.0;
 
 
 
@@ -193,200 +205,573 @@ public class AdversaryModel {
 		 * find the sequences where the previous sequence was played by attacker to reach the information set
 		 */
 
-		ArrayList<String> sequences = getAllSequences(att_sequences, strategy, LIMIT_ROUND);
-
-		/**
-		 * for each of the sequences multiply the probabilities by ensuring that attacker also played the actions to reach the leaf nodes
-		 */
+		double global_expected_value = 0;
 		double expected_value = 0;
-		for(String seq: sequences)
+		for(String user_id: att_sequences.keySet())
 		{
-			String sequence[] = seq.split(" ");
-			String defender_seq = sequence[0];
-			String attacker_seq = sequence[1];
-			
-			String attacker_id = getAttackerId(att_sequences, attacker_seq);
-			String total_attacker_seq = getTotalAttackerSeq(att_sequences, attacker_seq);
-			
-			
-			System.out.println("\nSequence : "+defender_seq + "   "+attacker_seq +"*************");
-			System.out.println("Attacker reward "+ rewards.get(attacker_id));
 
-			// last strategy for the sequence
-			HashMap<String, Double> last_strat = strategy.get(seq);
+			expected_value = 0;
+			String total_att_seq = att_sequences.get(user_id);
+			String total_def_seq = def_sequences.get(user_id);
 
-			for(String lastaction: last_strat.keySet())
+
+			/**
+			 *  consider defender and attacker previous sequences
+			 * for attacker consider action a in round
+			 */
+			ArrayList<String> sequences = getFullInfoSequences(total_att_seq, total_def_seq, strategy, LIMIT_ROUND, round, action);
+
+			/**
+			 * for each of the sequences multiply the probabilities by ensuring that attacker also played the actions to reach the leaf nodes
+			 */
+
+			for(String seq: sequences)
 			{
+				String sequence[] = seq.split(" ");
+				String defender_seq = sequence[0];
+				String attacker_seq = sequence[1];
 
-				double sequence_prob = last_strat.get(lastaction);
+				//String attacker_id = user_id;
+				//String total_attacker_seq = getTotalAttackerSeq(att_sequences, attacker_seq);  // what if multiple attacker seq? 
 
-				//System.out.println("initial seq prob "+ sequence_prob);
 
-				System.out.println("total defender sequence "+ defender_seq + ","+lastaction + ",initial prob "+ sequence_prob);
-				System.out.println("total Attacker sequence "+ total_attacker_seq);
+				//System.out.println("\nSequence : "+defender_seq + "   "+attacker_seq +"*************");
+				//System.out.println("Attacker reward "+ rewards.get(total_att_seq)); // what if multiple player plays same game and gets different rewards?
 
-				// run the loop until last round
+				// last strategy for the sequence
+				HashMap<String, Double> last_strat = strategy.get(seq);
 
-				for(int r=round; r < (LIMIT_ROUND); r++)
+				for(String lastaction: last_strat.keySet())
 				{
-					int roundindex = (r)*2;
 
-					String tmp_def_seq = "";
-					String tmp_att_seq = "";
+					double sequence_prob = last_strat.get(lastaction);
 
-					if(roundindex>0)
+					//System.out.println("initial seq prob "+ sequence_prob);
+
+					//System.out.println("total defender sequence "+ defender_seq + ","+lastaction + ",initial prob "+ sequence_prob);
+					//System.out.println("total Attacker sequence "+ total_att_seq);
+
+					// run the loop until last round
+
+					for(int r=round; r < (LIMIT_ROUND); r++)
 					{
-						tmp_def_seq = defender_seq.substring(0, roundindex-1);
-						tmp_att_seq = attacker_seq.substring(0, roundindex-1);
+						int roundindex = (r)*2;
+
+						String tmp_def_seq = "";
+						String tmp_att_seq = "";
+
+						if(roundindex>0)
+						{
+							tmp_def_seq = defender_seq.substring(0, roundindex-1);
+							tmp_att_seq = attacker_seq.substring(0, roundindex-1);
+						}
+
+
+
+
+						//System.out.println("tmp defender sequence "+ tmp_def_seq + ", tmp attacker sequence "+tmp_att_seq );
+
+						String r_action = defender_seq.substring(roundindex, roundindex+1);
+
+						//System.out.println("round "+ r + " r_action "+ r_action);
+
+						// find prob for r_action
+
+						if(tmp_def_seq.equals("") || tmp_att_seq.equals(""))
+						{
+							tmp_def_seq = "EMPTY";
+							tmp_att_seq = "EMPTY";
+						}
+
+						String key = tmp_def_seq + " "+ tmp_att_seq;
+
+
+
+						if(strategy.containsKey(key))
+						{
+
+							HashMap<String, Double> tmp_strat = strategy.get(key);
+
+							double prob = tmp_strat.get(r_action);
+
+							//System.out.println("round "+ r + " action "+ r_action + " prob "+ prob);
+
+							//System.out.println("prev seq prob " +sequence_prob);
+
+							sequence_prob *= prob;
+
+							//System.out.println("new seq prob "+ sequence_prob);
+
+						}
+						else
+						{
+							//System.out.println("new seq does not exist ");
+							//System.out.println("prev seq prob " +sequence_prob+",\n new seq prob "+ sequence_prob);
+						}
+
+						//System.out.println("hi");
+
+
+
 					}
 
+					//System.out.println("total defender sequence "+ defender_seq + ","+lastaction + ", final prob "+ sequence_prob);
+					//System.out.println("total att sequence "+ total_att_seq);
 
+					//TODO
 
+					// now use the probability to multiply the reward
 
-					System.out.println("tmp defender sequence "+ tmp_def_seq + ", tmp attacker sequence "+tmp_att_seq );
+					int reward = rewards.get(total_att_seq);
 
-					String r_action = defender_seq.substring(roundindex, roundindex+1);
+					//System.out.println("total attacker reward "+ reward);
 
-					System.out.println("round "+ r + " r_action "+ r_action);
+					double expectedreward = reward*sequence_prob;
 
-					// find prob for r_action
+					//System.out.println("total attacker exp_reward "+ expectedreward);
 
-					if(tmp_def_seq.equals("") || tmp_att_seq.equals(""))
-					{
-						tmp_def_seq = "EMPTY";
-						tmp_att_seq = "EMPTY";
-					}
+					// then add the expected value to the global sum
 
-					String key = tmp_def_seq + " "+ tmp_att_seq;
+					global_expected_value += expectedreward;
 
+					expected_value += expectedreward;
 
+					//System.out.println("attacker global exp_value "+ global_expected_value/att_sequences.size());
 
-					if(strategy.containsKey(key))
-					{
-
-						HashMap<String, Double> tmp_strat = strategy.get(key);
-
-						double prob = tmp_strat.get(r_action);
-
-						System.out.println("round "+ r + " action "+ r_action + " prob "+ prob);
-
-						System.out.println("prev seq prob " +sequence_prob);
-
-						sequence_prob *= prob;
-
-						System.out.println("new seq prob "+ sequence_prob);
-
-					}
-					else
-					{
-						System.out.println("new seq does not exist ");
-						System.out.println("prev seq prob " +sequence_prob+",\n new seq prob "+ sequence_prob);
-					}
-
-					//System.out.println("hi");
-
-
+					int k=1;
 
 				}
 
-				System.out.println("total defender sequence "+ defender_seq + ","+lastaction + ", final prob "+ sequence_prob);
+			}
 
-				//TODO
+			//System.out.println("attacker exp_value "+ expected_value);
+		}
 
-				// now use the probability to multiply the reward
+		//System.out.println("attacker global exp_value "+ global_expected_value/att_sequences.size());
+
+		return global_expected_value/att_sequences.size();
+	}
+	
+	
+	public static double computeExpectedPayoffPartialInfo(String action, int round, int LIMIT_ROUND, HashMap<String,String> att_sequences, HashMap<String,String> def_sequences, HashMap<String,Integer> rewards,HashMap<String, HashMap<String, Double>> strategy)
+	{
+		//double expectedutility = 0.0;
 
 
-				// then add the expected value to the global sum
+
+
+		/**
+		 * 
+		 * 
+		 * find the sequences where the previous sequence was played by attacker to reach the information set
+		 */
+
+		double global_expected_value = 0;
+		double expected_value = 0;
+		for(String user_id: att_sequences.keySet())
+		{
+
+			expected_value = 0;
+			String total_att_seq = att_sequences.get(user_id);
+			//String total_def_seq = def_sequences.get(user_id);
+
+
+			/**
+			 *  consider defender and attacker previous sequences
+			 * for attacker consider action a in round
+			 */
+			ArrayList<String> sequences = getPartialInfoSequences(total_att_seq, strategy, LIMIT_ROUND, round, action);
+
+			/**
+			 * for each of the sequences multiply the probabilities by ensuring that attacker also played the actions to reach the leaf nodes
+			 */
+
+			for(String seq: sequences)
+			{
+				String sequence[] = seq.split(" ");
+				String defender_seq = sequence[0];
+				String attacker_seq = sequence[1];
+
+				//String attacker_id = user_id;
+				//String total_attacker_seq = getTotalAttackerSeq(att_sequences, attacker_seq);  // what if multiple attacker seq? 
+
+
+				//System.out.println("\nSequence : "+defender_seq + "   "+attacker_seq +"*************");
+				//System.out.println("Attacker reward "+ rewards.get(total_att_seq)); // what if multiple player plays same game and gets different rewards?
+
+				// last strategy for the sequence
+				HashMap<String, Double> last_strat = strategy.get(seq);
+
+				for(String lastaction: last_strat.keySet())
+				{
+
+					double sequence_prob = last_strat.get(lastaction);
+
+					//System.out.println("initial seq prob "+ sequence_prob);
+
+					//System.out.println("total defender sequence "+ defender_seq + ","+lastaction + ",initial prob "+ sequence_prob);
+					//System.out.println("total Attacker sequence "+ total_att_seq);
+
+					// run the loop until last round
+
+					for(int r=round; r < (LIMIT_ROUND); r++)
+					{
+						int roundindex = (r)*2;
+
+						String tmp_def_seq = "";
+						String tmp_att_seq = "";
+
+						if(roundindex>0)
+						{
+							tmp_def_seq = defender_seq.substring(0, roundindex-1);
+							tmp_att_seq = attacker_seq.substring(0, roundindex-1);
+						}
+
+
+
+
+						//System.out.println("tmp defender sequence "+ tmp_def_seq + ", tmp attacker sequence "+tmp_att_seq );
+
+						String r_action = defender_seq.substring(roundindex, roundindex+1);
+
+						//System.out.println("round "+ r + " r_action "+ r_action);
+
+						// find prob for r_action
+
+						if(tmp_def_seq.equals("") || tmp_att_seq.equals(""))
+						{
+							tmp_def_seq = "EMPTY";
+							tmp_att_seq = "EMPTY";
+						}
+
+						String key = tmp_def_seq + " "+ tmp_att_seq;
+
+
+
+						if(strategy.containsKey(key))
+						{
+
+							HashMap<String, Double> tmp_strat = strategy.get(key);
+
+							double prob = tmp_strat.get(r_action);
+
+							//System.out.println("round "+ r + " action "+ r_action + " prob "+ prob);
+
+							//System.out.println("prev seq prob " +sequence_prob);
+
+							sequence_prob *= prob;
+
+							//System.out.println("new seq prob "+ sequence_prob);
+
+						}
+						else
+						{
+							//System.out.println("new seq does not exist ");
+							//System.out.println("prev seq prob " +sequence_prob+",\n new seq prob "+ sequence_prob);
+						}
+
+						//System.out.println("hi");
+
+
+
+					}
+
+					//System.out.println("total defender sequence "+ defender_seq + ","+lastaction + ", final prob "+ sequence_prob);
+					//System.out.println("total att sequence "+ total_att_seq);
+
+					//TODO
+
+					// now use the probability to multiply the reward
+
+					int reward = rewards.get(total_att_seq);
+
+					//System.out.println("total attacker reward "+ reward);
+
+					double expectedreward = reward*sequence_prob;
+
+					//System.out.println("total attacker exp_reward "+ expectedreward);
+
+					// then add the expected value to the global sum
+
+					global_expected_value += expectedreward;
+
+					expected_value += expectedreward;
+
+					//System.out.println("attacker global exp_value "+ global_expected_value/att_sequences.size());
+
+					int k=1;
+
+				}
 
 			}
 
+			//System.out.println("attacker exp_value "+ expected_value);
 		}
 
+		//System.out.println("attacker global exp_value "+ global_expected_value/att_sequences.size());
 
-
-
-
-		return expectedutility;
+		return global_expected_value/att_sequences.size();
 	}
 
 	private static String getTotalAttackerSeq(HashMap<String, String> att_sequences, String attacker_seq) {
-		
-		
+
+
 		for(String id: att_sequences.keySet())
 		{
 			String seq = att_sequences.get(id);
-			
-			
+
+
 			String tmpseq = seq.substring(0, seq.length()-2);
-			
+
 			if(tmpseq.equals(attacker_seq))
 			{
 				return seq;
 			}
-			
+
 		}
-		
-		
+
+
 		return null;
 	}
 
 
 	private static String getAttackerId(HashMap<String, String> att_sequences, String attacker_seq) {
-		
-		
-		
+
+
+
 		for(String id: att_sequences.keySet())
 		{
 			String seq = att_sequences.get(id);
-			
-			
+
+
 			String tmpseq = seq.substring(0, seq.length()-2);
-			
+
 			if(tmpseq.equals(attacker_seq))
 			{
 				return id;
 			}
-			
+
 		}
-		
-		
+
+
 		return null;
 	}
 
 
 	private static ArrayList<String> getAllSequences(HashMap<String, String> att_sequences,
-			HashMap<String, HashMap<String, Double>> strategy, int LIMIT_ROUND) {
+			HashMap<String, HashMap<String, Double>> strategy, int LIMIT_ROUND, int round, String action) {
 
 
 
 		ArrayList<String> sequences = new ArrayList<String>();
 
 
+		for(String att_prev: att_sequences.values())
+		{
 
+			String att_afterseq = "";
+			//if(round>0)
+			{
+				att_afterseq = att_prev.substring(round*2, att_prev.length()-2);
+			}
 
-		
 			for(String seq: strategy.keySet())
 			{
+
+
 				String[] defatt = seq.split(" ");
 
 				String nodes[] = defatt[1].split(",");
 
 
+				if((nodes.length == (LIMIT_ROUND)) )
+				{
+
+					//if(round>0)
+					//{
+					String tmp_att_after_seq = defatt[1].substring(round*2);
+					//String tmp_def_prev_seq = defatt[0].substring(0, round*2-1);
+
+					String[] att_nodes = defatt[1].split(",");
+
+					//System.out.println("tmp_def_prev_seq "+ tmp_def_prev_seq+"   tmp_att_prev_seq "+ tmp_att_prev_seq);
+
+					if(att_afterseq.compareTo(tmp_att_after_seq)==0 /*&& def_prevseq.compareTo(tmp_def_prev_seq) == 0*/)
+						//String action = "1";
+						//if(att_nodes[round].equals(action))
+					{
+
+						sequences.add(seq);
+						System.out.println("Adding sequence "+ seq);
+					}
+					//}
+					/*else
+					{
+						sequences.add(seq);
+						System.out.println("Adding sequence "+ seq);
+					}*/
+				}
+			}
+		}
+
+
+		return sequences;
+
+	}
+
+
+	
+
+	private static ArrayList<String> getPartialInfoSequences(String total_att_seq,
+			 HashMap<String, HashMap<String, Double>> strategy, int LIMIT_ROUND, int round, String action) {
+
+
+
+		ArrayList<String> sequences = new ArrayList<String>();
+
+
+		//	for(String att_prev: att_sequences.values())
+		{
+
+			String att_seq = "";
+			att_seq = total_att_seq.substring(0, total_att_seq.length()-2);
+			//String def_prev_seq = "";
+			/*if(round>0)
+			{
+				*//**
+				 * consider defender previous sequences
+				 * consider attacker full sequence
+				 *//*
+				def_prev_seq = total_def_seq.substring(0, round*2-1);
+				
+			}*/
+
+			for(String seq: strategy.keySet())
+			{
+
+
+				String[] defatt = seq.split(" ");
+
+				String nodes[] = defatt[1].split(",");
+
 
 				if((nodes.length == (LIMIT_ROUND)) )
 				{
-					for(String a_seq: att_sequences.values())
+					
+					
+					String tmp_att_seq = defatt[1];
+					if(round>0)
 					{
-						String tmpseq = a_seq.substring(0, a_seq.length()-2);
-						if(defatt[1].equals(tmpseq))
+						/*.substring(0, round*2+1)*/;
+						//String tmp_def_prev_seq = defatt[0].substring(0, round*2-1);
+						
+						//String[] att_nodes = defatt[1].split(",");
+
+						//System.out.println("tmp_def_prev_seq "+ tmp_def_prev_seq+"   tmp_att_prev_seq "+ tmp_att_prev_seq);
+
+						if(att_seq.compareTo(tmp_att_seq)==0 /*&& def_prev_seq.compareTo(tmp_def_prev_seq) == 0*/)
+							//String action = "1";
+							//if(att_nodes[round].equals(action))
 						{
+
 							sequences.add(seq);
+							//System.out.println("Adding sequence "+ seq);
 						}
 					}
+					else
+					{
+						
+						if(att_seq.compareTo(tmp_att_seq)==0)
+						{
 
+							sequences.add(seq);
+							//System.out.println("Adding sequence "+ seq);
+						}
+						//sequences.add(seq);
+						//System.out.println("Adding sequence "+ seq);
+					}
 				}
 			}
-		
+		}
+
+
+		return sequences;
+
+	}
+	
+	
+	private static ArrayList<String> getFullInfoSequences(String total_att_seq,
+			String total_def_seq, HashMap<String, HashMap<String, Double>> strategy, int LIMIT_ROUND, int round, String action) {
+
+
+
+		ArrayList<String> sequences = new ArrayList<String>();
+
+
+		//	for(String att_prev: att_sequences.values())
+		{
+
+			String att_seq = "";
+			att_seq = total_att_seq.substring(0, total_att_seq.length()-2);
+			String def_prev_seq = "";
+			if(round>0)
+			{
+				/**
+				 * consider defender previous sequences
+				 * consider attacker full sequence
+				 */
+				def_prev_seq = total_def_seq.substring(0, round*2-1);
+				
+			}
+
+			for(String seq: strategy.keySet())
+			{
+
+
+				String[] defatt = seq.split(" ");
+
+				String nodes[] = defatt[1].split(",");
+
+
+				if((nodes.length == (LIMIT_ROUND)) )
+				{
+					
+					
+					String tmp_att_seq = defatt[1];
+					if(round>0)
+					{
+						/*.substring(0, round*2+1)*/;
+						String tmp_def_prev_seq = defatt[0].substring(0, round*2-1);
+						
+						//String[] att_nodes = defatt[1].split(",");
+
+						//System.out.println("tmp_def_prev_seq "+ tmp_def_prev_seq+"   tmp_att_prev_seq "+ tmp_att_prev_seq);
+
+						if(att_seq.compareTo(tmp_att_seq)==0 && def_prev_seq.compareTo(tmp_def_prev_seq) == 0)
+							//String action = "1";
+							//if(att_nodes[round].equals(action))
+						{
+
+							sequences.add(seq);
+							//System.out.println("Adding sequence "+ seq);
+						}
+					}
+					else
+					{
+						
+						if(att_seq.compareTo(tmp_att_seq)==0)
+						{
+
+							sequences.add(seq);
+							//System.out.println("Adding sequence "+ seq);
+						}
+						//sequences.add(seq);
+						//System.out.println("Adding sequence "+ seq);
+					}
+				}
+			}
+		}
+
 
 		return sequences;
 
@@ -466,15 +851,20 @@ public class AdversaryModel {
 
 				// sequences where 
 				HashMap<String, String> att_sequences = computeAttackerSequences(a, ij, att_game_play, data_refined);
-				HashMap<String, String> def_sequences = computeDefenderSequences(a, ij, def_game_play, data_refined);
-				
-				HashMap<String, Integer> rewards = computeRewards(att_sequences, data_refined);
-				
+				HashMap<String, String> def_sequences = computeDefenderSequences(a, ij, def_game_play, att_game_play, data_refined);
+
+				HashMap<String, Integer> rewards = computeTotalRewards(att_sequences, data_refined, ij);
 
 
-				double uija = computeExpectedPayoff(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
+
+		//		double uija = computeExpectedPayoffPartialInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
+				double uija = computeExpectedPayoffFullInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
+
+				
+				System.out.println("ij "+ ij + ", a"+ a + ", uija "+ uija);
 
 			}
+			System.out.println();
 		}
 
 
@@ -483,15 +873,16 @@ public class AdversaryModel {
 	}
 
 	private static HashMap<String, String> computeDefenderSequences(String a, int ij,
-			HashMap<String, int[][]> game_play, ArrayList<ArrayList<String>> data_refined) {
-		
-		
+			HashMap<String, int[][]> def_game_play, HashMap<String,int[][]> att_game_play, ArrayList<ArrayList<String>> data_refined) {
+
+
 		int gameinstance = 0;
 		HashMap<String, String> sequences = new HashMap<String, String>();
 
-		for(String user_id: game_play.keySet())
+		for(String user_id: def_game_play.keySet())
 		{
-			int[][] tmpplay = game_play.get(user_id);
+			int[][] tmpplay = def_game_play.get(user_id);
+			int[][] att_play = att_game_play.get(user_id);
 
 
 
@@ -502,7 +893,7 @@ public class AdversaryModel {
 			else if(deforder==1)
 				gameinstance = 0;
 
-			if( tmpplay[gameinstance][ij] == Integer.parseInt(a))
+			if( att_play[gameinstance][ij] == Integer.parseInt(a))
 			{
 				String [] nodes = new String[tmpplay[gameinstance].length];
 
@@ -518,57 +909,131 @@ public class AdversaryModel {
 
 
 		return sequences;
-		
-		
+
+
 	}
 
 
-	private static HashMap<String, Integer> computeRewards(HashMap<String, String> att_sequences,
-			ArrayList<ArrayList<String>> data_refined) {
-		
-		
-		
+	private static HashMap<String, Integer> computeStepRewards(HashMap<String, String> att_sequences,
+			ArrayList<ArrayList<String>> data_refined, int r) {
+
+
+
 		HashMap<String, Integer> rewards = new HashMap<String, Integer>();
-		
-		int gameinstance = 0;
-		
+
+		int gameinstance = 1;
+
 		for(String user: att_sequences.keySet())
 		{
+			System.out.println("User "+ user);
+
+			if(user.equals("\"$2y$10$FZoYU9pJKScTeiUF.hmZI.fkxHcB4XylPpADen4Nbx6TMDMPkEnv.\""))
+			{
+				int x = 1;
+			}
+
 			int deforder = getDefOrder(user,data_refined);
 
 			if(deforder==0)
-				gameinstance = 3;
+				gameinstance = 4;
 			else if(deforder==1)
-				gameinstance = 0;
-			
-			
-			
+				gameinstance = 1;
+
+
+
 			String att_seq = att_sequences.get(user);
-			
-			//String defatt [] = attdeff_seq.split(" ");
-			
-			
-			
-			
+
+
+
+
+
+
 			for(ArrayList<String> example : data_refined)
 			{
 				String tmpuser = example.get(Headers_minimum.user_id.getValue());
 				int instance = Integer.parseInt(example.get(Headers_minimum.game_instance.getValue())) ;
 				int round = Integer.parseInt(example.get(Headers_minimum.round.getValue())) ;
 				int points =  Integer.parseInt(example.get(Headers_minimum.attacker_points.getValue())) ;
-				
-				if(instance==gameinstance && round==5 && tmpuser.equals(user))
+				int prev_points = 0;
+
+				if(instance==gameinstance && round==(r+1) && tmpuser.equals(user))
 				{
-					rewards.put(tmpuser, points);
+					prev_points = points;
+				}
+
+				if(instance==gameinstance && round==(r+2) && tmpuser.equals(user))
+				{
+					System.out.println("points "+ points);
+					rewards.put(att_seq, points-prev_points);
 					break;
 				}
-				
+
 			}
-			
-			
+
+
 		}
-		
-		
+
+
+		return rewards;
+	}
+
+	private static HashMap<String, Integer> computeTotalRewards(HashMap<String, String> att_sequences,
+			ArrayList<ArrayList<String>> data_refined, int r) {
+
+
+
+		HashMap<String, Integer> rewards = new HashMap<String, Integer>();
+
+		int gameinstance = 1;
+
+		for(String user: att_sequences.keySet())
+		{
+			//System.out.println("User "+ user);
+
+			if(user.equals("\"$2y$10$FZoYU9pJKScTeiUF.hmZI.fkxHcB4XylPpADen4Nbx6TMDMPkEnv.\""))
+			{
+				int x = 1;
+			}
+
+			int deforder = getDefOrder(user,data_refined);
+
+			if(deforder==0)
+				gameinstance = 4;
+			else if(deforder==1)
+				gameinstance = 1;
+
+
+
+			String att_seq = att_sequences.get(user);
+
+
+
+
+
+
+			for(ArrayList<String> example : data_refined)
+			{
+				String tmpuser = example.get(Headers_minimum.user_id.getValue());
+				int instance = Integer.parseInt(example.get(Headers_minimum.game_instance.getValue())) ;
+				int round = Integer.parseInt(example.get(Headers_minimum.round.getValue())) ;
+				int points =  Integer.parseInt(example.get(Headers_minimum.attacker_points.getValue())) ;
+				int prev_points = 0;
+
+
+
+				if(instance==gameinstance && round==5 && tmpuser.equals(user))
+				{
+					//System.out.println("points "+ points);
+					rewards.put(att_seq, points);
+					break;
+				}
+
+			}
+
+
+		}
+
+
 		return rewards;
 	}
 
@@ -600,6 +1065,7 @@ public class AdversaryModel {
 					nodes[i] = String.valueOf(tmpplay[gameinstance][i]);
 				}
 				String seq = String.join(",", nodes);
+				//seq = seq.substring(0,  seq.length()-2);
 				sequences.put(user_id, seq);
 			}
 		}
