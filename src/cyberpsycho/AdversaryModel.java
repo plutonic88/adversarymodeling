@@ -832,111 +832,84 @@ public class AdversaryModel {
 		//double ex = AdversaryModel.computeEx(att_action,r, LIMIT_ROUND, def_prevseq, att_prevseq, rewardij ,strategy);
 
 
-		double lambda = 0; 
+		//double lambda = 0; 
+		
+		HashMap<String, Double> Uija = new HashMap<String, Double>();
+		
+		HashMap<String, Integer> Nija = new HashMap<String, Integer>();
+		
+		HashMap<Integer, Double> Ai = new HashMap<Integer, Double>();
+		
+		int Ni = users_refined.size();
+		
 
 		for(int ij= 0; ij<5; ij++)
 		{
 			/**
 			 * for each action compute  Nija*Uija and sum them
 			 */
-			
-			System.out.println("************ Round "+ij+" *********");
-			
-			double sum_nija_uija_D = 0;
-			
-			
-			
-			
-			// computing D
+			//System.out.println("************ Round "+ij+" *********");
+			double Ai_sum = 0;
 			String[] actions = {"0", "1", "2", "3", "4", "5"};
 			for(String a: actions)
 			{
 				// Nija
 				int nija = computeNija(att_game_play, ij, Integer.parseInt(a), gameinstance, data_refined);
-				
-				System.out.println("Nija "+ nija);
-
-				//rewardij = computeReward();
-
 				// sequences where 
 				HashMap<String, String> att_sequences = computeAttackerSequences(a, ij, att_game_play, data_refined);
 				HashMap<String, String> def_sequences = computeDefenderSequences(a, ij, def_game_play, att_game_play, data_refined);
-
 				HashMap<String, Integer> rewards = computeTotalRewards(att_sequences, data_refined, ij);
-
-
-
 		//		double uija = computeExpectedPayoffPartialInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
 				double uija = computeExpectedPayoffFullInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
-				
-				System.out.println("Uija "+ uija);
-
+				String key = ij+","+a;
+				Uija.put(key, uija);
+				Nija.put(key, nija);
 				double tmp = nija*uija;
-				sum_nija_uija_D += tmp;
+				Ai_sum += tmp;
 				
-				System.out.println("Current sum of Nija*Uija "+ sum_nija_uija_D);
-				
-				//System.out.println("ij "+ ij + ", a"+ a + ", uija "+ uija);
-
 			}
+			Ai.put(ij, Ai_sum);
+		}
+		
+		
+		
+		double sum_dnom = 0;
+		double sum_nom = 0;
+		
+		for(int ij=0; ij<5; ij++)
+		{
+			double sum_ij_dnom = 0;
+			
+			String[] actions = {"0", "1", "2", "3", "4", "5"};
 			
 			
 			
-			System.out.println("sum_nija_uija_D "+ sum_nija_uija_D);
-			
-			
-			// computing Bi
-			double sum_Bi = 0;
 			for(String a: actions)
 			{
+				// Ai-Ni*Uix
 				
-				//rewardij = computeReward();
-
-				// sequences where 
-				HashMap<String, String> att_sequences = computeAttackerSequences(a, ij, att_game_play, data_refined);
-				HashMap<String, String> def_sequences = computeDefenderSequences(a, ij, def_game_play, att_game_play, data_refined);
-
-				HashMap<String, Integer> rewards = computeTotalRewards(att_sequences, data_refined, ij);
-
-
-
-		//		double uija = computeExpectedPayoffPartialInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
-				double uija = computeExpectedPayoffFullInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
 				
-				System.out.println("Uija "+ uija);
-
+				String key = ij+","+a;
+				double x = Math.log(Ai.get(ij) - Ni*Uija.get(key));
 				
-				sum_Bi += uija;
+				sum_ij_dnom += x;
 				
-				System.out.println("Current sum of sum_Bi "+ sum_Bi);
+				sum_nom += Uija.get(key);
 				
-				//System.out.println("ij "+ ij + ", a"+ a + ", uija "+ uija);
-
+				
+				
 			}
-			
-			System.out.println("sum of sum_Bi "+ sum_Bi);
-			
-			double dnom = Math.log(sum_nija_uija_D-sum_Bi);
-			
-			System.out.println("dnom "+ dnom);
-			
-			double tmplambda = dnom/sum_Bi;
-			
-			System.out.println("tmp lambda "+ tmplambda);
-			
-			
-			
-			lambda += tmplambda;
-			
-			System.out.println("ij "+ij+",  lambda "+ lambda);
-			
-			
-			
-			
 		}
-
-
-
+		
+		
+		
+		double lambda = -(sum_dnom/sum_nom);
+		
+		System.out.println("************ lambda "+lambda+" *********");
+		
+		
+		
+		
 
 	}
 
@@ -957,9 +930,9 @@ public class AdversaryModel {
 			int deforder = getDefOrder(user_id,data_refined);
 
 			if(deforder==0)
-				gameinstance = 3;
+				gameinstance = 5;
 			else if(deforder==1)
-				gameinstance = 0;
+				gameinstance = 2;
 
 			if( att_play[gameinstance][ij] == Integer.parseInt(a))
 			{
@@ -1066,9 +1039,9 @@ public class AdversaryModel {
 			int deforder = getDefOrder(user,data_refined);
 
 			if(deforder==0)
-				gameinstance = 4;
+				gameinstance = 6;
 			else if(deforder==1)
-				gameinstance = 1;
+				gameinstance = 3;
 
 
 
@@ -1120,9 +1093,9 @@ public class AdversaryModel {
 			int deforder = getDefOrder(user_id,data_refined);
 
 			if(deforder==0)
-				gameinstance = 3;
+				gameinstance = 5;
 			else if(deforder==1)
-				gameinstance = 0;
+				gameinstance = 2;
 
 			if( tmpplay[gameinstance][ij] == Integer.parseInt(a))
 			{
