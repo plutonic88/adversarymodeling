@@ -832,20 +832,29 @@ public class AdversaryModel {
 		//double ex = AdversaryModel.computeEx(att_action,r, LIMIT_ROUND, def_prevseq, att_prevseq, rewardij ,strategy);
 
 
-
+		double lambda = 0; 
 
 		for(int ij= 0; ij<5; ij++)
 		{
 			/**
 			 * for each action compute  Nija*Uija and sum them
 			 */
-			double sum = 0;
-
+			
+			System.out.println("************ Round "+ij+" *********");
+			
+			double sum_nija_uija_D = 0;
+			
+			
+			
+			
+			// computing D
 			String[] actions = {"0", "1", "2", "3", "4", "5"};
 			for(String a: actions)
 			{
 				// Nija
 				int nija = computeNija(att_game_play, ij, Integer.parseInt(a), gameinstance, data_refined);
+				
+				System.out.println("Nija "+ nija);
 
 				//rewardij = computeReward();
 
@@ -859,12 +868,71 @@ public class AdversaryModel {
 
 		//		double uija = computeExpectedPayoffPartialInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
 				double uija = computeExpectedPayoffFullInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
-
 				
-				System.out.println("ij "+ ij + ", a"+ a + ", uija "+ uija);
+				System.out.println("Uija "+ uija);
+
+				double tmp = nija*uija;
+				sum_nija_uija_D += tmp;
+				
+				System.out.println("Current sum of Nija*Uija "+ sum_nija_uija_D);
+				
+				//System.out.println("ij "+ ij + ", a"+ a + ", uija "+ uija);
 
 			}
-			System.out.println();
+			
+			
+			
+			System.out.println("sum_nija_uija_D "+ sum_nija_uija_D);
+			
+			
+			// computing Bi
+			double sum_Bi = 0;
+			for(String a: actions)
+			{
+				
+				//rewardij = computeReward();
+
+				// sequences where 
+				HashMap<String, String> att_sequences = computeAttackerSequences(a, ij, att_game_play, data_refined);
+				HashMap<String, String> def_sequences = computeDefenderSequences(a, ij, def_game_play, att_game_play, data_refined);
+
+				HashMap<String, Integer> rewards = computeTotalRewards(att_sequences, data_refined, ij);
+
+
+
+		//		double uija = computeExpectedPayoffPartialInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
+				double uija = computeExpectedPayoffFullInfo(a, ij, LIMIT_ROUND, att_sequences, def_sequences, rewards ,strategy);
+				
+				System.out.println("Uija "+ uija);
+
+				
+				sum_Bi += uija;
+				
+				System.out.println("Current sum of sum_Bi "+ sum_Bi);
+				
+				//System.out.println("ij "+ ij + ", a"+ a + ", uija "+ uija);
+
+			}
+			
+			System.out.println("sum of sum_Bi "+ sum_Bi);
+			
+			double dnom = Math.log(sum_nija_uija_D-sum_Bi);
+			
+			System.out.println("dnom "+ dnom);
+			
+			double tmplambda = dnom/sum_Bi;
+			
+			System.out.println("tmp lambda "+ tmplambda);
+			
+			
+			
+			lambda += tmplambda;
+			
+			System.out.println("ij "+ij+",  lambda "+ lambda);
+			
+			
+			
+			
 		}
 
 
