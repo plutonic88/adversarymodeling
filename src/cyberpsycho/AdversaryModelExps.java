@@ -2,11 +2,25 @@ package cyberpsycho;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
 
-import cyberpsycho.Data.Headers;
+import cs.Interval.contraction.SecurityGameContraction;
+import cs.Interval.contraction.TargetNode;
 import cyberpsycho.Data.Headers_minimum;
+import ega.games.EmpiricalMatrixGame;
+import ega.games.MatrixGame;
+import ega.games.MixedStrategy;
+import ega.games.OutcomeDistribution;
+import ega.games.OutcomeIterator;
+import ega.solvers.QRESolver;
+import ega.solvers.RegretLearner;
+import ega.solvers.SolverUtils;
+import groupingtargets.ClusterTargets;
 
 public class AdversaryModelExps {
+	
+	public static Random rand = new Random(5);
 
 
 	public static void doDummyTesting()
@@ -238,6 +252,326 @@ public class AdversaryModelExps {
 
 
 		return users;
+	}
+
+	/**
+	 * use a 5x5 game
+	 * 
+	 * compute mixed strategy for defender
+	 * 
+	 * use defender's stratgey. generate attacker strategy given defenders strategy using AQRE
+	 * @throws Exception 
+	 */
+	public static void doDummyTest2() throws Exception {
+		
+
+		int nrow = 1;
+		
+		int ncol = 5;
+		
+		int dmax = 20;
+		
+		
+		
+		int ITER = 1;
+		
+		int als[] = {2}; //DO + weka + CON target per cluster
+		//radius
+		
+		
+		int ranges[][] = {{0,2},{3,8},{9, 10}};
+		int[] percforranges = {80, 10, 10};
+		
+		/*int ranges[][] = {{0,7},{6,8},{8, 10}};
+		int[] percforranges = {90, 0, 10};*/
+		
+		
+		
+		int blockdim = 2; // block = blockdim x blockdim
+		
+		// nrow has to be divisible by block
+		
+		int nTargets = nrow*ncol;
+		
+		int ncat = 3;
+		int[] targetsincat = getTargetsInCats(nTargets, percforranges);
+		double[][] density=SecurityGameContraction.generateRandomDensityV2(ncat, ITER, ranges, nTargets, targetsincat);
+		
+		
+		HashMap<Integer, ArrayList<TargetNode>> alltargets = new HashMap<Integer, ArrayList<TargetNode>>();
+		HashMap<Integer, HashMap<Integer, TargetNode>> alltargetmaps = new HashMap<Integer, HashMap<Integer, TargetNode>>();
+		//HashMap<Integer, ArrayList<Integer>[]> allclus = new HashMap<Integer, ArrayList<Integer>[]>();
+		HashMap<Integer, ArrayList<Integer>[]> allclus = new HashMap<Integer, ArrayList<Integer>[]>();
+		//double[][] density=SecurityGameContraction.generateRandomDensity( perc, ITER, lstart, lend,  hstart, hend, nTargets, false);
+		
+		//double[][] density = new double[ITER][nTargets];
+		
+		
+		
+		for(int iter = 0; iter<ITER; iter++)
+		{
+			ArrayList<TargetNode> targets = new ArrayList<TargetNode>();  //createGraph();
+			HashMap<Integer, TargetNode> targetmaps = new HashMap<Integer, TargetNode>();
+			ClusterTargets.buildcsvGraphExp(nrow,ncol,density,targets, iter );
+			//SecurityGameContraction.assignRandomDensityZeroSum(density, gamedata, targets, iter);
+			//SecurityGameContraction.buildGraph(nrow, ncol, gamedata, targets);
+			//SecurityGameContraction.assignRandomDensityZeroSum(density, gamedata, targets, iter);
+			alltargets.put(iter, targets);
+			for(TargetNode t : targets)
+			{
+				targetmaps.put(t.getTargetid(), t);
+				
+			}
+			alltargetmaps.put(iter, targetmaps);
+			
+			ClusterTargets.buildFile(nrow,ncol,density,targets, iter );
+			
+			int g=0;
+			
+			
+			
+		}
+		
+		
+	}
+	
+	private static int[] getTargetsInCats(int nTargets, int[] percforcats) {
+
+
+		int x[] = new int[percforcats.length];
+
+
+		int sum = 0;
+
+		for(int i=0; i<percforcats.length; i++)
+		{
+			x[i] = (int)Math.floor(nTargets*(percforcats[i]/100.00));
+			sum += x[i];
+		}
+
+
+
+
+		if(sum<nTargets)
+		{
+
+			int max = Integer.MIN_VALUE;
+			int index= 0;
+			for(int i=0; i<percforcats.length; i++)
+			{
+				if(max>percforcats[i])
+				{
+					max = percforcats[i];
+					index = i;
+				}
+			}
+
+			x[index] += (nTargets-sum);
+
+		}
+
+
+
+		return x;
+	}
+
+	
+	public static int randInt(int min, int max) {
+
+		// Usually this should be a field rather than a method variable so
+		// that it is not re-seeded every call.
+		
+
+		// nextInt is normally exclusive of the top value,
+		// so add 1 to make it inclusive
+		int randomNum = rand.nextInt((max - min) + 1) + min;
+
+		return randomNum;
+	}
+
+	public static void doDummyTest3() {
+		
+		int[] actions = {3,3};
+		MatrixGame gm = new MatrixGame(2,actions);
+		OutcomeIterator itr = gm.iterator();
+		while(itr.hasNext())
+		{
+			int[] outcome = itr.next();
+			double payoff = randInt(5, 10);
+			gm.setPayoff(outcome, 0, payoff);
+			System.out.println("outcome :"+ outcome[0] + ", "+outcome[1]+ " : 0 "+payoff);
+			 payoff = randInt(-1, 10);
+			gm.setPayoff(outcome, 1, payoff);
+			System.out.println("outcome :"+ outcome[0] + ", "+outcome[1]+ " : 1 "+payoff);
+			
+		}
+		
+		MixedStrategy[] gamestrategy = new MixedStrategy[2];
+		
+		QRESolver qre = new QRESolver(100);
+		EmpiricalMatrixGame emg = new EmpiricalMatrixGame(gm);
+		qre.setDecisionMode(QRESolver.DecisionMode.RAW);
+		for(int i=0; i< gm.getNumPlayers(); i++ )
+		{
+			gamestrategy[i] = qre.solveGame(emg, i);
+		}
+		
+		System.out.println("s");
+		
+		//gamestrategy = RegretLearner.solveGame(gm);
+		
+		System.out.println("h");
+		
+		
+		int ITER = 1000;
+
+
+		double lambda = 0.0;
+		for(int ilambda=0; ilambda<80; ilambda++)
+		{
+
+			for(int i=0; i<ITER; i++)
+			{
+
+				// use defender strategy to play defender action
+
+				int defaction = getDefenderMove(gm, gamestrategy[0]);
+				//System.out.println("lambda "+lambda+", iter "+ i + ", defaction "+ defaction);
+
+				// use defender strategy to find attacker action using AQRE for different lambda
+				
+				int attaction = getAttackerMove(gm,gamestrategy, lambda);
+				
+				System.out.println("lambda "+lambda+", iter "+ i + ", attaction "+ attaction);
+
+			}
+			lambda += 0.02;
+		}
+
+		
+		
+		
+	}
+
+	private static int getAttackerMove(MatrixGame gm, MixedStrategy mixedStrategy[], double lambda) {
+		
+		//int attaction = -1;
+		
+		// find probability of making every move
+		
+		double probs[] = new double[gm.getNumActions(1)];
+		
+		for(int action=0; action<probs.length; action++)
+		{
+			probs[action] = getProbAQRE(action, gm, mixedStrategy, lambda);
+		}
+		
+		
+		
+		int action = -1;
+		Random random = new Random();
+	
+		//double[] probs = mixedStrategy.getProbs();
+		double probsum = 0.0;
+		double r = random.nextDouble();
+		for(int j=0; j<(probs.length); j++)
+		{
+			probsum += probs[j];
+			if(r<probsum)
+			{
+				action = j;
+				break;
+			}
+		}
+		
+		
+		if(action==-1)
+		{
+			int x=0;
+		}
+		
+		return action+1;
+	}
+
+	private static double getProbAQRE(int action, MatrixGame gm, MixedStrategy mixedStrategy[], double lambda) {
+		
+		
+		double prob = 0.0;
+		
+		double[] logit = new double[gm.getNumActions(1)];
+		
+		
+		
+		
+		
+		double logitsum  = 0;
+		
+		for(int a=0; a<logit.length; a++)
+		{
+			double ux = getExp(mixedStrategy, gm, 1, a+1);
+			logit[a] = Math.exp(ux*lambda);
+			logitsum += logit[a];
+					
+		}
+		
+		prob = logit[action]/logitsum;
+		
+		
+		
+		return prob;
+	}
+
+	private static double getExp(MixedStrategy[] mixedStrategy, MatrixGame gm, int player, int action) {
+		
+		
+		List<MixedStrategy> strategylist = new ArrayList<MixedStrategy>();
+		
+		for(int i=0; i<mixedStrategy[1].getNumActions(); i++)
+		{
+			if((i+1) == action)
+			{
+				mixedStrategy[1].setProb(action, 1);
+			}
+			else
+			{
+				mixedStrategy[1].setProb(i+1, 0.0);
+			}
+		}
+		
+		
+		for(int i=0; i<mixedStrategy.length; i++)
+		{
+			strategylist.add(mixedStrategy[i]);
+		}
+		OutcomeDistribution origdistribution = new OutcomeDistribution(strategylist);
+		double[]  originalpayoff = SolverUtils.computeOutcomePayoffs(gm, origdistribution);
+		
+		return originalpayoff[player];
+		
+	}
+
+	private static int getDefenderMove(MatrixGame gm, MixedStrategy mixedStrategy) 
+	{
+		
+
+			int action = 0;
+			Random random = new Random();
+		
+			double[] probs = mixedStrategy.getProbs();
+			double probsum = 0.0;
+			double r = random.nextDouble();
+			for(int j=0; j<(probs.length-1); j++)
+			{
+				probsum += probs[j+1];
+				if(r<probsum)
+				{
+					action = j+1;
+					break;
+				}
+			}
+			
+			return action;
+		
 	}
 
 }

@@ -1,12 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-9">
+	<classpathentry kind="lib" path="/Users/anjonsunny/eclipse-workspace/adversarymodeling/lib/ssgabstraction.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/Users/anjonsunny/eclipse-workspace/SSGAbstraction/lib/commons-collections4-4.1.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="/Users/anjonsunny/eclipse-workspace/SSGAbstraction/lib/commons-csv-1.5.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/Users/anjonsunny/eclipse-workspace/SSGAbstraction/lib/cplex.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/Users/anjonsunny/eclipse-workspace/SSGAbstraction/lib"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/Users/anjonsunny/eclipse-workspace/adversarymodeling/lib/matrixgame.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
