@@ -508,10 +508,12 @@ public class AdversaryModelExps {
 	    System.out.println(eqn);
 	    
 	    proxy.eval(eqn);
-	    proxy.eval("solve(Eq1, lambda)");
+	    proxy.eval("symlambda = solve(Eq1, lambda)");
 	    
-	    double result = ((double[]) proxy.getVariable("lambda"))[0];
-	    System.out.println("Result: " + result);
+	    proxy.eval("dlambda = double(symlambda)");
+	    
+	    double result = ((double[]) proxy.getVariable("dlambda"))[0];
+	    System.out.println("dlambda: " + result);
 
 	    //Disconnect the proxy from MATLAB
 	    proxy.disconnect();
