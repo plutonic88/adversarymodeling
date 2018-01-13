@@ -10,7 +10,9 @@ public class Main {
 		//AdversaryModelExps.doDummyTest2();
 		
 		
-		AdversaryModelExps.doDummyTest3();
+		//AdversaryModelExps.doDummyTest3();
+		
+		AdversaryModelExps.getLambda();
 		
 		
 	}

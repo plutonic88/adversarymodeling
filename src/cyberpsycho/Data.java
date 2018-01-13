@@ -72,6 +72,10 @@ public class Data {
 	}
 
 
+	/**
+	 * for the MTurk data
+	 * @return
+	 */
 	public static ArrayList<ArrayList<String>> readData()
 	{
 		
@@ -131,6 +135,51 @@ public class Data {
 		return null;
 
 	}
+	
+	
+	
+	/**
+	 * read data for tests
+	 * @param lambda
+	 * @return
+	 */
+	public static ArrayList<ArrayList<String>> readData(double lambda)
+	{
+		
+		ArrayList<ArrayList<String>> data = new ArrayList<ArrayList<String>>();
+
+		try {
+
+			Reader in = new FileReader("result/lambda"+lambda+".csv");
+			Iterable<CSVRecord> records = CSVFormat.RFC4180.parse(in);
+			for (CSVRecord record : records) 
+			{
+				ArrayList<String> example = new ArrayList<String>();
+				
+				String userid = record.get(0);
+			    String action = record.get(1);
+			    String reward = record.get(2);
+			    
+			    example.add(userid);
+			    example.add(action);
+			    example.add(reward);
+			    
+			    data.add(example);
+				
+
+			}
+			return data;
+
+		}
+		catch(Exception ex)
+		{
+
+		}
+
+		return null;
+
+	}
+	
 	
 	/**
 	 * 
