@@ -10,9 +10,11 @@ public class Main {
 		//AdversaryModelExps.doDummyTest2();
 		
 		
-		//AdversaryModelExps.doDummyTest3();
+		//AdversaryModelExps.generateOneStageGameData();
 		
-		AdversaryModelExps.getLambda();
+		//AdversaryModelExps.getLambdaOneStageGame();
+		
+		AdversaryModelExps.getLambdaOneStageFlipIt();
 		
 		
 	}

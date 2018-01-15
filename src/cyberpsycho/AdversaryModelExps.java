@@ -80,6 +80,23 @@ public class AdversaryModelExps {
 		}
 
 	}
+	
+	private static void printOneStageGamePlay(HashMap<String, Integer> game_play) 
+	{
+
+
+		System.out.println("Game play : ");
+		for(String user: game_play.keySet())
+		{
+			System.out.println("user " + user);
+			int play = game_play.get(user);
+
+			
+					System.out.print(play + " ");
+				
+		}
+
+	}
 
 	private static HashMap<String, int[][]> buildGamePlay(ArrayList<String> users_refined, ArrayList<ArrayList<String>> data_refined, int i) {
 
@@ -134,6 +151,75 @@ public class AdversaryModelExps {
 
 					int action = Integer.parseInt(attackeraction);
 					tmpgameplay[gameinstance-1][round-1] = (action);
+
+				}
+
+			}
+			gameplay.put(user_id, tmpgameplay);
+
+		}
+		return gameplay;
+	}
+	
+	
+	private static HashMap<String, Integer> buildOneStageGamePlay(ArrayList<String> users_refined, ArrayList<ArrayList<String>> data_refined, int i) {
+
+
+		HashMap<String, Integer> gameplay = new HashMap<String, Integer>();
+
+		// for every user
+
+		System.out.println("Building game play");
+		for(String user_id: users_refined)
+		{
+			System.out.println("\nuser "+ user_id);
+			//int gameinstance = 1;
+			//int round = 0;
+			int tmpgameplay = -1;
+			for(ArrayList<String> example: data_refined)
+			{
+				// get user id
+				String tmpuser = example.get(Headers_minimum.user_id.getValue());
+				// if example is for user_id
+				if(user_id.equals(tmpuser))
+				{
+
+					/*if(user_id.equals("\"$2y$10$1eppnuF14Ls9jlRDjIPIOuX4Dg3v.KS6CP.6nl0NZCZuKAnS7Kosm\""))
+					{
+						//System.out.print("h");
+						int g=1;
+					}*/
+
+					
+
+
+					int round = Integer.parseInt(example.get(Headers_minimum.round.getValue()));
+					
+					if(round==1)
+					{
+						//int gameinstance = Integer.parseInt(example.get(Headers_minimum.game_instance.getValue()));
+						
+						String attackeraction = example.get(Headers_minimum.attacker_action.getValue());
+
+						if(i==0)
+						{
+							attackeraction = example.get(Headers_minimum.defender_action.getValue());
+						}
+
+						System.out.print(attackeraction+" ");
+
+						
+
+						if(attackeraction.equals(" ") || attackeraction.equals(""))
+						{
+							attackeraction = "5";
+						}
+
+						int action = Integer.parseInt(attackeraction);
+						tmpgameplay = (action);
+					}
+					
+					
 
 				}
 
@@ -393,8 +479,8 @@ public class AdversaryModelExps {
 
 		return randomNum;
 	}
-	
-	public static void getLambda() throws MatlabConnectionException, MatlabInvocationException
+
+	public static void getLambdaOneStageGame() throws MatlabConnectionException, MatlabInvocationException
 	{
 		int[] actions = {3,3};
 		MatrixGame gm = new MatrixGame(2,actions);
@@ -424,225 +510,341 @@ public class AdversaryModelExps {
 		System.out.println("s");*/
 
 		gamestrategy = RegretLearner.solveGame(gm);
-		
-		
-		
+
+
+
 		// parse data
-		
+
 		double[] lambdas = {.5 };
 		for(double lambda: lambdas)
 		{
-		
+
 			ArrayList<ArrayList<String>> data = Data.readData(lambda);
-			
+
 			HashMap<Integer, Integer> ni = computeNi(data);
-			
+
 			HashMap<Integer, Double> ui = computeUi(data);
-			
+
 			int n=300;
-			
+
 			double A=0;
 			for(int action=1; action <=3; action++)
 			{
 				A += (ui.get(action)*ni.get(action));
 			}
-			
+
 			double B = A/n;
-			
+
 			double[] coeffs = new double[3];
-			
+
 			for(int i=0; i<3; i++)
 			{
 				coeffs[i] = B-ui.get(i+1);
 			}
-			
-			
-			
-			int x=0;
-			
-			double estlambda = estimateLambda(ni, n, ui);
-			
-			
+
+
+
+			//int x=0;
+
+			double estimatedlambda = estimateLambda(ni, n, ui);
+
+			System.out.println("Estimated lambda "+ estimatedlambda);
+
+
 		}
-		
+
 	}
 
 	private static double estimateLambda(HashMap<Integer, Integer> ni, int n, HashMap<Integer, Double> ui) throws MatlabConnectionException, MatlabInvocationException
 	{
-		
+
 		//Create a proxy, which we will use to control MATLAB
-	    MatlabProxyFactory factory = new MatlabProxyFactory();
-	    MatlabProxy proxy = factory.getProxy();
+		MatlabProxyFactory factory = new MatlabProxyFactory();
+		MatlabProxy proxy = factory.getProxy();
 
-	    //Set a variable, add to it, retrieve it, and print the result
-	    
-	    proxy.eval("syms lambda");
-	    
-	    proxy.setVariable("n",300);
-	    // set ni variables
-	    String n_i [] = new String[ni.size()];
-	    for(int i=1; i<=3; i++)
-	    {
-	    		n_i[i-1] = "n"+i;
-	    		proxy.setVariable(n_i[i-1], ni.get(i));
-	    		
-	    }
-	    
-	    // set ui variables
-	    String u_i [] = new String[ui.size()];
-	    for(int i=1; i<=3; i++)
-	    {
-	    		u_i[i-1] = "u"+i;
-	    		proxy.setVariable(u_i[i-1], ui.get(i));
-	    		
-	    }
-	    
-	    
-	    //Eq1 = 0 == (exp(lambda*U1) + exp(lambda*U2) + exp(lambda*U3)) * ((N1*U1)+(N2*U2)+(N3*U3)) - N*(exp(lambda*U1)*(U1) + exp(lambda*U2)*(U2) + exp(lambda*U2)*(U2));
-	    // build the equation string
-	    //Eq1 = 0 ==(exp( lambda *u1)+exp( lambda *u2)+exp( lambda *u3))*((n1*u1)+(n2*u2)+(n3*u3))-n*(exp( lambda *u1)*u1+exp( lambda *u2)*u2+exp( lambda *u3)*u3)
+		//Set a variable, add to it, retrieve it, and print the result
 
-	    
-	   String eqn = buildEqnString(ui, ni, u_i, n_i);
-	    
-	    System.out.println(eqn);
-	    
-	    proxy.eval(eqn);
-	    proxy.eval("symlambda = solve(Eq1, lambda)");
-	    
-	    proxy.eval("dlambda = double(symlambda)");
-	    
-	    double result = ((double[]) proxy.getVariable("dlambda"))[0];
-	    System.out.println("dlambda: " + result);
+		proxy.eval("syms lambda");
 
-	    //Disconnect the proxy from MATLAB
-	    proxy.disconnect();
-	    
-	   
-	    return 0.0;
-		
+		proxy.setVariable("n",300);
+		// set ni variables
+		String n_i [] = new String[ni.size()];
+		for(int i=1; i<=3; i++)
+		{
+			n_i[i-1] = "n"+i;
+			proxy.setVariable(n_i[i-1], ni.get(i));
+
+		}
+
+		// set ui variables
+		String u_i [] = new String[ui.size()];
+		for(int i=1; i<=3; i++)
+		{
+			u_i[i-1] = "u"+i;
+			proxy.setVariable(u_i[i-1], ui.get(i));
+
+		}
+
+
+		//Eq1 = 0 == (exp(lambda*U1) + exp(lambda*U2) + exp(lambda*U3)) * ((N1*U1)+(N2*U2)+(N3*U3)) - N*(exp(lambda*U1)*(U1) + exp(lambda*U2)*(U2) + exp(lambda*U2)*(U2));
+		// build the equation string
+		//Eq1 = 0 ==(exp( lambda *u1)+exp( lambda *u2)+exp( lambda *u3))*((n1*u1)+(n2*u2)+(n3*u3))-n*(exp( lambda *u1)*u1+exp( lambda *u2)*u2+exp( lambda *u3)*u3)
+
+
+		String eqn = buildEqnString(ui, ni, u_i, n_i);
+
+		System.out.println("\n"+eqn);
+
+		proxy.eval(eqn);
+		proxy.eval("symlambda = solve(Eq1, lambda)");
+
+		proxy.eval("dlambda = double(symlambda)");
+
+		double result = ((double[]) proxy.getVariable("dlambda"))[0];
+		System.out.println("\n dlambda: " + result);
+
+		//Disconnect the proxy from MATLAB
+		proxy.disconnect();
+
+
+		return 0.0;
+
+	}
+	
+	
+	private static double estimateFlipItLambda(HashMap<Integer, Integer> ni, int n, HashMap<Integer, Double> ui) throws MatlabConnectionException, MatlabInvocationException
+	{
+
+		//Create a proxy, which we will use to control MATLAB
+		MatlabProxyFactory factory = new MatlabProxyFactory();
+		MatlabProxy proxy = factory.getProxy();
+
+		//Set a variable, add to it, retrieve it, and print the result
+
+		proxy.eval("syms lambda");
+
+		proxy.setVariable("n",n);
+		// set ni variables
+		String n_i [] = new String[ni.size()];
+		for(int i=0; i<ni.size(); i++)
+		{
+			n_i[i] = "n"+i;
+			proxy.setVariable(n_i[i], ni.get(i));
+
+		}
+
+		// set ui variables
+		String u_i [] = new String[ui.size()];
+		for(int i=0; i<ui.size(); i++)
+		{
+			u_i[i] = "u"+i;
+			proxy.setVariable(u_i[i], ui.get(i));
+
+		}
+
+
+		//Eq1 = 0 == (exp(lambda*U1) + exp(lambda*U2) + exp(lambda*U3)) * ((N1*U1)+(N2*U2)+(N3*U3)) - N*(exp(lambda*U1)*(U1) + exp(lambda*U2)*(U2) + exp(lambda*U2)*(U2));
+		// build the equation string
+		//Eq1 = 0 ==(exp( lambda *u1)+exp( lambda *u2)+exp( lambda *u3))*((n1*u1)+(n2*u2)+(n3*u3))-n*(exp( lambda *u1)*u1+exp( lambda *u2)*u2+exp( lambda *u3)*u3)
+
+
+		String eqn = buildFlipItEqnString(ui, ni, u_i, n_i);
+
+		System.out.println("\n"+eqn);
+
+		proxy.eval(eqn);
+		proxy.eval("symlambda = solve(Eq1, lambda)");
+
+		proxy.eval("dlambda = double(symlambda)");
+
+		double result = ((double[]) proxy.getVariable("dlambda"))[0];
+		System.out.println("\n dlambda: " + result);
+
+		//Disconnect the proxy from MATLAB
+		proxy.disconnect();
+
+
+		return 0.0;
+
 	}
 
 	private static String buildEqnString(HashMap<Integer,Double> ui, HashMap<Integer,Integer> ni, String[] u_i, String[] n_i) {
-		
-		 String eqn = "Eq1 = 0 ==";
-		    
-		    // build first loop
-		    String e1 = "";
-		    for(int i=1; i<=ui.size(); i++)
-		    {
-		    		e1 = e1 + "exp( lambda *"+u_i[i-1]+ ")";
-		    		
-		    		if(i != ui.size())
-		    		{
-		    			e1 = e1 + "+";
-		    		}
-		    }
-		    
-		    e1 = "(" + e1 + ")";
-		    
-		    
-		    
-		    String e2 = "";
-		    for(int i=1; i<=ui.size(); i++)
-		    {
-		    		e2 = e2 + "("+n_i[i-1]+"*"+ u_i[i-1]+")";
-		    		
-		    		if(i != ui.size())
-		    		{
-		    			e2 = e2 + "+";
-		    		}
-		    }
-		    
-		    e2 = "(" + e2 + ")";
-		    
-		    
-		    eqn = eqn + e1 + "*" + e2;
-		    
-		    
-		    String e3 = "";
-		    for(int i=1; i<=ui.size(); i++)
-		    {
-		    		e3 = e3 + "exp( lambda *"+u_i[i-1]+ ")*"+u_i[i-1];
-		    		
-		    		if(i != ui.size())
-		    		{
-		    			e3 = e3 + "+";
-		    		}
-		    }
-		    
-		    e3 = "(" + e3 + ")";
-		    
-		    eqn = eqn + "-" + "n" + "*" + e3;
-		    
-		    return eqn;
+
+		String eqn = "Eq1 = 0 ==";
+
+		// build first loop
+		String e1 = "";
+		for(int i=1; i<=ui.size(); i++)
+		{
+			e1 = e1 + "exp( lambda *"+u_i[i-1]+ ")";
+
+			if(i != ui.size())
+			{
+				e1 = e1 + "+";
+			}
+		}
+
+		e1 = "(" + e1 + ")";
+
+
+
+		String e2 = "";
+		for(int i=1; i<=ui.size(); i++)
+		{
+			e2 = e2 + "("+n_i[i-1]+"*"+ u_i[i-1]+")";
+
+			if(i != ui.size())
+			{
+				e2 = e2 + "+";
+			}
+		}
+
+		e2 = "(" + e2 + ")";
+
+
+		eqn = eqn + e1 + "*" + e2;
+
+
+		String e3 = "";
+		for(int i=1; i<=ui.size(); i++)
+		{
+			e3 = e3 + "exp( lambda *"+u_i[i-1]+ ")*"+u_i[i-1];
+
+			if(i != ui.size())
+			{
+				e3 = e3 + "+";
+			}
+		}
+
+		e3 = "(" + e3 + ")";
+
+		eqn = eqn + "-" + "n" + "*" + e3;
+
+		return eqn;
 	}
+	
+	
+	private static String buildFlipItEqnString(HashMap<Integer,Double> ui, HashMap<Integer,Integer> ni, String[] u_i, String[] n_i) {
+
+		String eqn = "Eq1 = 0 ==";
+
+		// build first loop
+		String e1 = "";
+		for(int i=0; i<ui.size(); i++)
+		{
+			e1 = e1 + "exp( lambda *"+u_i[i]+ ")";
+
+			if(i != ui.size()-1)
+			{
+				e1 = e1 + "+";
+			}
+		}
+
+		e1 = "(" + e1 + ")";
+
+
+
+		String e2 = "";
+		for(int i=0; i<ui.size(); i++)
+		{
+			e2 = e2 + "("+n_i[i]+"*"+ u_i[i]+")";
+
+			if(i != ui.size()-1)
+			{
+				e2 = e2 + "+";
+			}
+		}
+
+		e2 = "(" + e2 + ")";
+
+
+		eqn = eqn + e1 + "*" + e2;
+
+
+		String e3 = "";
+		for(int i=0; i<ui.size(); i++)
+		{
+			e3 = e3 + "exp( lambda *"+u_i[i]+ ")*"+u_i[i];
+
+			if(i != ui.size()-1)
+			{
+				e3 = e3 + "+";
+			}
+		}
+
+		e3 = "(" + e3 + ")";
+
+		eqn = eqn + "-" + "n" + "*" + e3;
+
+		return eqn;
+	}
+
 
 	private static HashMap<Integer, Integer> computeNi(ArrayList<ArrayList<String>> data) {
-		
-		
+
+
 		HashMap<Integer, Integer> ni = new HashMap<Integer, Integer>();
-		
+
 		int[] count = new int[3];
-		
-					
-			
-			for(ArrayList<String> ex: data)
-			{
-				String action = ex.get(1);
-				int a = Integer.parseInt(action);
-				
-				count[a-1]++;
-			}
-			for(int i=0; i<3; i++)
-			{
-				ni.put(i+1, count[i]);
-			}
-			
-			return ni;
-		
+
+
+
+		for(ArrayList<String> ex: data)
+		{
+			String action = ex.get(1);
+			int a = Integer.parseInt(action);
+
+			count[a-1]++;
+		}
+		for(int i=0; i<3; i++)
+		{
+			ni.put(i+1, count[i]);
+		}
+
+		return ni;
+
 	}
-	
-	
-private static HashMap<Integer, Double> computeUi(ArrayList<ArrayList<String>> data) {
-		
-		
+
+
+	private static HashMap<Integer, Double> computeUi(ArrayList<ArrayList<String>> data) {
+
+
 		HashMap<Integer, Double> ui = new HashMap<Integer, Double>();
-		
+
 		int[] count = {0,0,0};
 		Double[] uis = {0.0,0.0,0.0};
-		
-					
-			
-			for(ArrayList<String> ex: data)
-			{
-				String action = ex.get(1);
-				int a = Integer.parseInt(action);
-				
-				String us = ex.get(2);
-				double u = Double.parseDouble(us);
-				
-				uis[a-1] += u;
-				count[a-1]++;
-			}
-			
-			
-			
-			
-			for(int i=0; i<3; i++)
-			{
-				uis[i] /= count[i];
-				
-				ui.put(i+1, uis[i]);
-			}
-			
-			return ui;
-		
-	}
-	
-	
 
-	public static void doDummyTest3() {
+
+
+		for(ArrayList<String> ex: data)
+		{
+			String action = ex.get(1);
+			int a = Integer.parseInt(action);
+
+			String us = ex.get(2);
+			double u = Double.parseDouble(us);
+
+			uis[a-1] += u;
+			count[a-1]++;
+		}
+
+
+
+
+		for(int i=0; i<3; i++)
+		{
+			uis[i] /= count[i];
+
+			ui.put(i+1, uis[i]);
+		}
+
+		return ui;
+
+	}
+
+
+
+	public static void generateOneStageGameData() {
 
 		int[] actions = {3,3};
 		MatrixGame gm = new MatrixGame(2,actions);
@@ -712,11 +914,11 @@ private static HashMap<Integer, Double> computeUi(ArrayList<ArrayList<String>> d
 					}
 
 					double[] exppayoffs = getExp(gamestrategy, gm);
-					
-					
+
+
 					double exp = getExp(gamestrategy, gm, 1, attaction);
-					
-					
+
+
 					System.out.println("lambda "+lambda+", iter "+ i + ", attaction "+ attaction + ", attpayoff "+ exp + ", defpayoff "+ defpayoff+", defexp "+ exppayoffs[0] + ", attexp "+ exppayoffs[1]);
 					pw.append(i +","+attaction+ ","+exp +"\n");
 				}
@@ -883,6 +1085,195 @@ private static HashMap<Integer, Double> computeUi(ArrayList<ArrayList<String>> d
 
 		return action;
 
+	}
+
+	public static void getLambdaOneStageFlipIt() throws MatlabConnectionException, MatlabInvocationException 
+	{
+
+
+
+		// read the data we got from MTurk
+		ArrayList<ArrayList<String>> data =  Data.readData();
+
+
+
+		// keep the users who played all 6 games
+		// that means they have 
+		ArrayList<String> users_refined = refineUser(data, -1, 1);
+		ArrayList<ArrayList<String>>  data_refined = refineData(data,1);
+		System.out.println("Total number of users "+ users_refined.size());
+
+
+		// list the game play of the users
+
+		HashMap<String, Integer> att_game_play = buildOneStageGamePlay(users_refined, data_refined, 1);
+		//HashMap<String, int[][]> def_game_play = buildGamePlay(users_refined, data_refined, 0);
+		//HashMap<String, int[][]> reward = buildGameRewards(users_refined, data_refined);
+
+		printOneStageGamePlay(att_game_play);
+
+		HashMap<String, HashMap<String, Double>> strategy = Data.readStrategy("g5d5_FI.txt");
+		String key = "EMPTY EMPTY"; 
+		HashMap<String, Double> probs = strategy.get(key);
+
+		//AdversaryModel.computeLambda(users_refined, att_game_play, def_game_play,reward, data_refined, 4);
+
+		HashMap<Integer, Double > ui = attExpPayoffs(att_game_play, probs);
+
+
+		//ArrayList<ArrayList<String>> data = Data.readData(lambda);
+
+		HashMap<Integer, Integer> ni = computeFLipItNi(att_game_play);
+
+		//HashMap<Integer, Double> ui = computeUi(data);
+
+		int n=users_refined.size();
+
+		double A=0;
+		for(int action=0; action <6; action++)
+		{
+			double u = ui.get(action);
+			double n_i = ni.get(action);
+			
+			A += (u*n_i);
+		}
+
+		double B = A/n;
+
+		double[] coeffs = new double[6];
+
+		for(int i=0; i<6; i++)
+		{
+			coeffs[i] = B-ui.get(i);
+		}
+
+
+
+		//int x=0;
+
+		double estimatedlambda = estimateFlipItLambda(ni, n, ui);
+
+		System.out.println("Estimated lambda "+ estimatedlambda);
+
+
+
+
+	}
+
+	private static HashMap<Integer, Integer> computeFLipItNi(HashMap<String,Integer> att_game_play) {
+		
+		
+		HashMap<Integer, Integer> ni = new HashMap<Integer, Integer>();
+
+		int[] count = new int[6];
+
+
+
+		for(String ex: att_game_play.keySet())
+		{
+			int a = att_game_play.get(ex);
+			//int a = Integer.parseInt(action);
+
+			count[a]++;
+		}
+		for(int i=0; i<6; i++)
+		{
+			ni.put(i, count[i]);
+		}
+
+		return ni;
+
+		
+		
+	}
+
+	private static HashMap<Integer, Double> attExpPayoffs(HashMap<String, Integer> att_game_play,
+			HashMap<String, Double> probs) {
+		
+		
+		HashMap<Integer, Double> ui = new HashMap<Integer, Double>();
+
+		int[] count = {0,0,0,0,0,0};
+		Double[] uis = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+		
+		int[][] target = new int[6][4];
+		
+		
+		target[0][0] = 0;
+		target[0][1] = -2;
+		target[0][2] = 2;
+		target[0][3] = 0;
+		
+		target[1][0] = 0;
+		target[1][1] = -8;
+		target[1][2] = 8;
+		target[1][3] = 0;
+		
+		target[2][0] = 0;
+		target[2][1] = -2;
+		target[2][2] = 2;
+		target[2][3] = 0;
+		
+		target[3][0] = 0;
+		target[3][1] = -4;
+		target[3][2] = -4;
+		target[3][3] = 0;
+		
+		target[4][0] = 0;
+		target[4][1] = -5;
+		target[4][2] = 5;
+		target[4][3] = 0;
+		
+		
+		target[5][0] = 0;
+		target[5][1] = 0;
+		target[5][2] = 0;
+		target[5][3] = 0;
+		
+		
+		
+		
+		
+		
+		
+
+
+		for(String ex: att_game_play.keySet())
+		{
+			int a = att_game_play.get(ex);
+			
+			
+
+			String sa = a+"";
+			double cov = 0;
+			if(probs.containsKey(sa))
+			{
+				cov = probs.get(sa);
+			}
+			
+			double u = cov*target[a][3] + (1-cov)*target[a][2];
+			
+
+			uis[a] += u;
+			count[a]++;
+		}
+
+
+
+
+		for(int i=0; i<6; i++)
+		{
+			if(count[i] != 0)
+			{
+				uis[i] /= count[i];
+			}
+
+			ui.put(i, uis[i]);
+		}
+
+		return ui;
+		
+		
 	}
 
 }
