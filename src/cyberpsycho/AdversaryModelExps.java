@@ -11,17 +11,19 @@ import java.util.Random;
 import cs.Interval.contraction.SecurityGameContraction;
 import cs.Interval.contraction.TargetNode;
 import cyberpsycho.Data.Headers_minimum;
-import ega.games.MatrixGame;
-import ega.games.MixedStrategy;
-import ega.games.OutcomeDistribution;
-import ega.games.OutcomeIterator;
-import ega.solvers.RegretLearner;
-import ega.solvers.SolverUtils;
+import games.EmpiricalMatrixGame;
+import games.MatrixGame;
+import games.MixedStrategy;
+import games.OutcomeDistribution;
+import games.OutcomeIterator;
 import groupingtargets.ClusterTargets;
 import matlabcontrol.MatlabConnectionException;
 import matlabcontrol.MatlabInvocationException;
 import matlabcontrol.MatlabProxy;
 import matlabcontrol.MatlabProxyFactory;
+import solvers.QRESolver;
+import solvers.SolverUtils;
+import subgame.Parameters;
 
 public class AdversaryModelExps {
 
@@ -80,7 +82,7 @@ public class AdversaryModelExps {
 		}
 
 	}
-	
+
 	private static void printOneStageGamePlay(HashMap<String, Integer> game_play) 
 	{
 
@@ -91,9 +93,9 @@ public class AdversaryModelExps {
 			System.out.println("user " + user);
 			int play = game_play.get(user);
 
-			
-					System.out.print(play + " ");
-				
+
+			System.out.print(play + " ");
+
 		}
 
 	}
@@ -160,8 +162,8 @@ public class AdversaryModelExps {
 		}
 		return gameplay;
 	}
-	
-	
+
+
 	private static HashMap<String, Integer> buildOneStageGamePlay(ArrayList<String> users_refined, ArrayList<ArrayList<String>> data_refined, int i) {
 
 
@@ -190,15 +192,15 @@ public class AdversaryModelExps {
 						int g=1;
 					}*/
 
-					
+
 
 
 					int round = Integer.parseInt(example.get(Headers_minimum.round.getValue()));
-					
+
 					if(round==1)
 					{
 						//int gameinstance = Integer.parseInt(example.get(Headers_minimum.game_instance.getValue()));
-						
+
 						String attackeraction = example.get(Headers_minimum.attacker_action.getValue());
 
 						if(i==0)
@@ -208,7 +210,7 @@ public class AdversaryModelExps {
 
 						System.out.print(attackeraction+" ");
 
-						
+
 
 						if(attackeraction.equals(" ") || attackeraction.equals(""))
 						{
@@ -218,8 +220,8 @@ public class AdversaryModelExps {
 						int action = Integer.parseInt(attackeraction);
 						tmpgameplay = (action);
 					}
-					
-					
+
+
 
 				}
 
@@ -499,7 +501,7 @@ public class AdversaryModelExps {
 
 		MixedStrategy[] gamestrategy = new MixedStrategy[2];
 
-		/*QRESolver qre = new QRESolver(100);
+		QRESolver qre = new QRESolver(100);
 		EmpiricalMatrixGame emg = new EmpiricalMatrixGame(gm);
 		qre.setDecisionMode(QRESolver.DecisionMode.RAW);
 		for(int i=0; i< gm.getNumPlayers(); i++ )
@@ -507,15 +509,15 @@ public class AdversaryModelExps {
 			gamestrategy[i] = qre.solveGame(emg, i);
 		}
 
-		System.out.println("s");*/
+		System.out.println("s");
 
-		gamestrategy = RegretLearner.solveGame(gm);
+		//gamestrategy = RegretLearner.solveGame(gm);
 
 
 
 		// parse data
 
-		double[] lambdas = {.5 };
+		double[] lambdas = {0.08/*,.08, .1, .5, 1, 2*/};
 		for(double lambda: lambdas)
 		{
 
@@ -610,8 +612,8 @@ public class AdversaryModelExps {
 		return 0.0;
 
 	}
-	
-	
+
+
 	private static double estimateFlipItLambda(HashMap<Integer, Integer> ni, int n, HashMap<Integer, Double> ui) throws MatlabConnectionException, MatlabInvocationException
 	{
 
@@ -658,13 +660,13 @@ public class AdversaryModelExps {
 		proxy.eval("dlambda = double(symlambda)");
 
 		double result = ((double[]) proxy.getVariable("dlambda"))[0];
-		System.out.println("\n dlambda: " + result);
+		System.out.println("\nlambda: " + result);
 
 		//Disconnect the proxy from MATLAB
 		proxy.disconnect();
 
 
-		return 0.0;
+		return result;
 
 	}
 
@@ -722,8 +724,8 @@ public class AdversaryModelExps {
 
 		return eqn;
 	}
-	
-	
+
+
 	private static String buildFlipItEqnString(HashMap<Integer,Double> ui, HashMap<Integer,Integer> ni, String[] u_i, String[] n_i) {
 
 		String eqn = "Eq1 = 0 ==";
@@ -863,7 +865,7 @@ public class AdversaryModelExps {
 
 		MixedStrategy[] gamestrategy = new MixedStrategy[2];
 
-		/*QRESolver qre = new QRESolver(100);
+		QRESolver qre = new QRESolver(100);
 		EmpiricalMatrixGame emg = new EmpiricalMatrixGame(gm);
 		qre.setDecisionMode(QRESolver.DecisionMode.RAW);
 		for(int i=0; i< gm.getNumPlayers(); i++ )
@@ -871,9 +873,9 @@ public class AdversaryModelExps {
 			gamestrategy[i] = qre.solveGame(emg, i);
 		}
 
-		System.out.println("s");*/
+		System.out.println("s");
 
-		gamestrategy = RegretLearner.solveGame(gm);
+		//gamestrategy = RegretLearner.solveGame(gm);
 
 		System.out.println("h");
 
@@ -1100,11 +1102,81 @@ public class AdversaryModelExps {
 		// keep the users who played all 6 games
 		// that means they have 
 		ArrayList<String> users_refined = refineUser(data, -1, 1);
+		System.out.println("NUmber of users found "+ users_refined.size());
+
+
+		/**
+		 * 1. high score
+		 * 2. Low score
+		 * 
+		 * 3. Rank depending on personality
+		 * 3a. remove those for whom corresponding type score is not the maximum
+		 * 3b. Keep High variation
+		 * 3c. Remove high variation
+		 * 4. cluster depending on personality score
+		 * 5. cluster depending on frequency
+		 * 6. cluster depending on play in each round
+		 */
+
+		int personality = 	-1;
+		int user_refine_type = 1;
+		
+		
+		
+		ArrayList<String> users_refined_type = refineUsers(users_refined, data, user_refine_type, personality);
+		//ArrayList<String> users_lowscore = refineUsers(users_refined, data, 0, personality);
+
+
 		ArrayList<ArrayList<String>>  data_refined = refineData(data,1);
-		System.out.println("Total number of users "+ users_refined.size());
+		System.out.println("Total number of high score users "+ users_refined_type.size());
 
 
 		// list the game play of the users
+		
+		//users_refined = users_refined_type;
+		
+		// keep 50
+		
+		int remove = 0;
+		
+		int keep = users_refined.size() - remove;
+		
+		// keep 0 to 50
+		
+		int keepstart = 121;
+		int keepend = 154;
+		
+		users_refined.clear();
+		
+		double sumscore = 0;
+		
+		double sum_mscore =0;
+		double sum_nscore = 0;
+		double sum_pscore = 0;
+		
+		
+		for(int i=keepstart; i<keepend; i++)
+		{
+			users_refined.add(users_refined_type.get(i));
+			
+			String tmpusr = users_refined_type.get(i);
+			
+			sumscore += getUserScore(tmpusr, data_refined);
+			
+			sum_mscore += getPersonalityScore(tmpusr, data_refined, 0);
+			sum_nscore += getPersonalityScore(tmpusr, data_refined, 1);
+			sum_pscore += getPersonalityScore(tmpusr, data_refined, 2);
+			
+			
+			System.out.println("kept user "+ tmpusr);
+		}
+		
+		sumscore /= users_refined.size();
+		sum_mscore /= users_refined.size();
+		sum_nscore /= users_refined.size();
+		sum_pscore /= users_refined.size();
+		
+		
 
 		HashMap<String, Integer> att_game_play = buildOneStageGamePlay(users_refined, data_refined, 1);
 		//HashMap<String, int[][]> def_game_play = buildGamePlay(users_refined, data_refined, 0);
@@ -1134,7 +1206,7 @@ public class AdversaryModelExps {
 		{
 			double u = ui.get(action);
 			double n_i = ni.get(action);
-			
+
 			A += (u*n_i);
 		}
 
@@ -1153,16 +1225,339 @@ public class AdversaryModelExps {
 
 		double estimatedlambda = estimateFlipItLambda(ni, n, ui);
 
-		System.out.println("Estimated lambda "+ estimatedlambda);
+		System.out.println("Estimated lambda "+ estimatedlambda + ", avg score "+ sumscore);
+		
+		
+		try
+		{
+			PrintWriter pw = new PrintWriter(new FileOutputStream(new File("iter-lambda.csv"),true));
+			// gamenumber, subgame, psne, meb,qre
+			pw.append(keepstart+"-"+keepend+","+sumscore +","+estimatedlambda+","+sum_mscore+","+sum_nscore+","+sum_pscore+"\n");
+			pw.close();
+		}
+		catch(Exception ex)
+		{
+			System.out.println(" ");
+		}
 
 
 
 
 	}
 
+
+
+
+	/**
+	 * 
+	 * @param users_refined
+	 * @param data
+	 * @param user_refine_type
+	 * @param personality 
+	 * @return
+	 */
+	private static ArrayList<String> refineUsers(ArrayList<String> users_refined, ArrayList<ArrayList<String>> data,
+			int user_refine_type, int personality) {
+
+
+		
+		ArrayList<String> sorted_users = new ArrayList<String>();
+
+
+		if(user_refine_type==0)// high score
+		{
+			ArrayList<int[]> new_users = new ArrayList<int[]>();
+			int userindex = 0;
+			for(String tmpusr: users_refined)
+			{
+
+				int score = getUserScore(tmpusr,data);
+
+				System.out.println("User "+ tmpusr + ", score " + score);
+
+				int[] ex = {userindex, score};
+
+				new_users.add(ex);
+				userindex++;
+			}
+
+			// sort the users
+			System.out.println("Sorting the users");
+
+			int[][] srted_users = sortUsersDesc(new_users);
+
+
+
+			for(int i=0; i<srted_users.length; i++)
+			{
+				sorted_users.add(users_refined.get(srted_users[i][0]));
+				System.out.println("User "+ users_refined.get(srted_users[i][0]) + ", score "+ srted_users[i][1]);
+			}
+		}
+		else if(user_refine_type==1) // low score
+		{
+			ArrayList<int[]> new_users = new ArrayList<int[]>();
+			int userindex = 0;
+			for(String tmpusr: users_refined)
+			{
+
+				int score = getUserScore(tmpusr,data);
+
+				System.out.println("User "+ tmpusr + ", score " + score);
+
+				int[] ex = {userindex, score};
+
+				new_users.add(ex);
+				userindex++;
+			}
+
+			// sort the users
+			System.out.println("Sorting the users");
+
+			int[][] srted_users = sortUsersAsc(new_users);
+
+
+
+			for(int i=0; i<srted_users.length; i++)
+			{
+				sorted_users.add(users_refined.get(srted_users[i][0]));
+				System.out.println("User "+ users_refined.get(srted_users[i][0]) + ", score "+ srted_users[i][1]);
+			}
+		}
+		else if(personality >= 0) // mach 
+		{
+			ArrayList<double[]> new_users = new ArrayList<double[]>();
+			int userindex = 0;
+			for(String tmpusr: users_refined)
+			{
+
+				double mscore = getPersonalityScore(tmpusr,data, 0);
+				double nscore = getPersonalityScore(tmpusr,data, 1);
+				double pscore = getPersonalityScore(tmpusr,data, 2);
+				
+				System.out.println("user "+ tmpusr + " m: "+ mscore + ", n: "+ nscore + ", p: "+ pscore);
+				
+				
+				double maxp = (( (mscore>=nscore)?mscore:nscore)>=pscore)?(((mscore>=nscore)?mscore:nscore)):pscore;
+				
+				if(maxp==mscore && personality==0)
+				{
+					System.out.println("User "+ tmpusr + ", max mscore " + mscore);
+
+					double[] ex = {userindex, mscore};
+
+					new_users.add(ex);
+					userindex++;
+				}
+				else if(maxp==nscore && personality==1)
+				{
+					System.out.println("User "+ tmpusr + ", max nscore " + nscore);
+
+					double[] ex = {userindex, nscore};
+
+					new_users.add(ex);
+					userindex++;
+				}
+				else if(maxp==pscore && personality==2)
+				{
+					System.out.println("User "+ tmpusr + ", max pscore " + pscore);
+
+					double[] ex = {userindex, pscore};
+
+					new_users.add(ex);
+					userindex++;
+				}
+
+				
+			}
+
+			// sort the users
+			System.out.println("Sorting the users");
+
+			double[][] srted_users = sortUsersAscD(new_users);
+
+
+
+			for(int i=0; i<srted_users.length; i++)
+			{
+				sorted_users.add(users_refined.get((int)srted_users[i][0]));
+				System.out.println("User "+ users_refined.get((int)srted_users[i][0]) + ", score "+ srted_users[i][1]);
+			}
+		}
+
+
+		return sorted_users;
+	}
+
+
+
+
+	private static double getPersonalityScore(String tmpusr, ArrayList<ArrayList<String>> data, int personality) {
+		
+		int start =-1;
+		int end = -1;
+		
+		if(personality==0)
+		{
+			start = AdversaryModel.M_START_INDEX;
+			end = AdversaryModel.M_END_INDEX;
+		}
+		else if(personality==1)
+		{
+			start = AdversaryModel.N_START_INDEX;
+			end = AdversaryModel.N_END_INDEX;
+		}
+		else if(personality == 2)
+		{
+			start = AdversaryModel.P_START_INDEX;
+			end = AdversaryModel.P_END_INDEX;
+		}
+		
+		
+		for(ArrayList<String> example: data)
+		{
+			if(example.get(Headers_minimum.user_id.getValue()).equals(tmpusr))
+			{
+				double sum = 0;
+				for(int i=start; i<=end; i++)
+				{
+					String s = example.get(i);
+					if(!s.equals(" "))
+					{
+						sum += Integer.parseInt(s);
+					}
+				}
+				sum /= 9.0;
+				return sum;
+
+			}
+				
+		}
+		
+		return -1;
+	}
+
+	public static int[][] sortUsersDesc(ArrayList<int[]> users) 
+	{
+
+		int[][] srted = new int[users.size()][2];
+		for(int i=0; i<srted.length; i++)
+		{
+			srted[i][0] = users.get(i)[0];
+			srted[i][1] = users.get(i)[1];
+		}
+		int[] swap = {0,0};
+
+		for (int k = 0; k < srted.length; k++) 
+		{
+			for (int d = 1; d < srted.length-k; d++) 
+			{
+				if (srted[d-1][1] < srted[d][1])    // ascending order
+				{
+					swap = srted[d];
+					srted[d]  = srted[d-1];
+					srted[d-1] = swap;
+				}
+			}
+		}
+		return srted;
+	}
+	
+	public static double[][] sortUsersDescD(ArrayList<double[]> users) 
+	{
+
+		double[][] srted = new double[users.size()][2];
+		for(int i=0; i<srted.length; i++)
+		{
+			srted[i][0] = users.get(i)[0];
+			srted[i][1] = users.get(i)[1];
+		}
+		double[] swap = {0,0};
+
+		for (int k = 0; k < srted.length; k++) 
+		{
+			for (int d = 1; d < srted.length-k; d++) 
+			{
+				if (srted[d-1][1] < srted[d][1])    // ascending order
+				{
+					swap = srted[d];
+					srted[d]  = srted[d-1];
+					srted[d-1] = swap;
+				}
+			}
+		}
+		return srted;
+	}
+	
+	public static int[][] sortUsersAsc(ArrayList<int[]> users) 
+	{
+
+		int[][] srted = new int[users.size()][2];
+		for(int i=0; i<srted.length; i++)
+		{
+			srted[i][0] = users.get(i)[0];
+			srted[i][1] = users.get(i)[1];
+		}
+		int[] swap = {0,0};
+
+		for (int k = 0; k < srted.length; k++) 
+		{
+			for (int d = 1; d < srted.length-k; d++) 
+			{
+				if (srted[d-1][1] > srted[d][1])    // ascending order
+				{
+					swap = srted[d];
+					srted[d]  = srted[d-1];
+					srted[d-1] = swap;
+				}
+			}
+		}
+		return srted;
+	}
+	
+	public static double[][] sortUsersAscD(ArrayList<double[]> users) 
+	{
+
+		double[][] srted = new double[users.size()][2];
+		for(int i=0; i<srted.length; i++)
+		{
+			srted[i][0] = users.get(i)[0];
+			srted[i][1] = users.get(i)[1];
+		}
+		double[] swap = {0,0};
+
+		for (int k = 0; k < srted.length; k++) 
+		{
+			for (int d = 1; d < srted.length-k; d++) 
+			{
+				if (srted[d-1][1] > srted[d][1])    // ascending order
+				{
+					swap = srted[d];
+					srted[d]  = srted[d-1];
+					srted[d-1] = swap;
+				}
+			}
+		}
+		return srted;
+	}
+
+
+
+
+	private static int getUserScore(String tmpusr, ArrayList<ArrayList<String>> data) {
+
+		for(ArrayList<String> example: data)
+		{
+			if(example.get(Headers_minimum.user_id.getValue()).equals(tmpusr))
+				return Integer.parseInt(example.get(Headers_minimum.total_points.getValue()));
+		}
+
+		return -1;
+	}
+
 	private static HashMap<Integer, Integer> computeFLipItNi(HashMap<String,Integer> att_game_play) {
-		
-		
+
+
 		HashMap<Integer, Integer> ni = new HashMap<Integer, Integer>();
 
 		int[] count = new int[6];
@@ -1183,66 +1578,66 @@ public class AdversaryModelExps {
 
 		return ni;
 
-		
-		
+
+
 	}
 
 	private static HashMap<Integer, Double> attExpPayoffs(HashMap<String, Integer> att_game_play,
 			HashMap<String, Double> probs) {
-		
-		
+
+
 		HashMap<Integer, Double> ui = new HashMap<Integer, Double>();
 
 		int[] count = {0,0,0,0,0,0};
 		Double[] uis = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-		
+
 		int[][] target = new int[6][4];
-		
-		
+
+
 		target[0][0] = 0;
 		target[0][1] = -2;
 		target[0][2] = 2;
 		target[0][3] = 0;
-		
+
 		target[1][0] = 0;
 		target[1][1] = -8;
 		target[1][2] = 8;
 		target[1][3] = 0;
-		
+
 		target[2][0] = 0;
 		target[2][1] = -2;
 		target[2][2] = 2;
 		target[2][3] = 0;
-		
+
 		target[3][0] = 0;
 		target[3][1] = -4;
 		target[3][2] = -4;
 		target[3][3] = 0;
-		
+
 		target[4][0] = 0;
 		target[4][1] = -5;
 		target[4][2] = 5;
 		target[4][3] = 0;
-		
-		
+
+
 		target[5][0] = 0;
 		target[5][1] = 0;
 		target[5][2] = 0;
 		target[5][3] = 0;
-		
-		
-		
-		
-		
-		
-		
+
+
+
+
+
+
+
 
 
 		for(String ex: att_game_play.keySet())
 		{
 			int a = att_game_play.get(ex);
-			
-			
+
+
 
 			String sa = a+"";
 			double cov = 0;
@@ -1250,9 +1645,9 @@ public class AdversaryModelExps {
 			{
 				cov = probs.get(sa);
 			}
-			
+
 			double u = cov*target[a][3] + (1-cov)*target[a][2];
-			
+
 
 			uis[a] += u;
 			count[a]++;
@@ -1272,8 +1667,8 @@ public class AdversaryModelExps {
 		}
 
 		return ui;
-		
-		
+
+
 	}
 
 }

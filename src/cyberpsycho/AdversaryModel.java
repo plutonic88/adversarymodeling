@@ -7,6 +7,14 @@ import cyberpsycho.Data.Headers_minimum;
 
 public class AdversaryModel {
 
+	
+	
+	public final static int M_START_INDEX = 11;
+	public final static int M_END_INDEX = 19;
+	public final static int N_START_INDEX = 20;
+	public final static int N_END_INDEX = 28;
+	public final static int P_START_INDEX = 29;
+	public final static int P_END_INDEX = 37;
 
 
 	/**

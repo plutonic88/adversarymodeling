@@ -57,7 +57,9 @@ public class Data {
 	 */
 	
 	public enum Headers_minimum {
-		user_id(0), game_id(1), game_instance(2),game_type(3), pick_def_order(4), game_played(5), round(6), defender_action(7), attacker_action(8), attacker_points(9), total_points(10);
+		user_id(0), game_id(1), game_instance(2),game_type(3), pick_def_order(4), game_played(5), round(6), defender_action(7), attacker_action(8), attacker_points(9), total_points(10), m1(11),m2(12),m3(13),m4(14),m5(15),m6(16),m7(17),m8(18),m9(19),n1(20),
+		n2(21),n3(22),n4(23),n5(24),n6(25),n7(26),n8(27),n9(28),p1(29),p2(30),p3(31),p4(32),p5(33),p6(34),p7(35),
+		p8(36),p9(37);
 		
 		private final int value;
 		
@@ -106,6 +108,30 @@ public class Data {
 				String attacker_points = record.get(Headers.attacker_points);
 				String total_points = record.get(Headers.total_point);
 				
+				
+				/*ArrayList<String> m = new ArrayList<String>();
+				for(int i=11; i<=19; i++)
+				{
+					m.add(record.get(i));
+				}*/
+				
+				
+				/*ArrayList<String> n = new ArrayList<String>();
+				for(int i=20; i<=28; i++)
+				{
+					n.add(record.get(i));
+				}*/
+				
+				
+				/*ArrayList<String> p = new ArrayList<String>();
+				for(int i=29; i<=37; i++)
+				{
+					p.add(record.get(i));
+				}*/
+				
+				
+				
+				
 				example.add(user_id);
 				example.add(game_id);
 				example.add(game_instance);
@@ -119,6 +145,28 @@ public class Data {
 				example.add(attacker_action);
 				example.add(attacker_points);
 				example.add(total_points);
+				
+				//ArrayList<String> m = new ArrayList<String>();
+				for(int i=11; i<=19; i++)
+				{
+					example.add(record.get(i));
+				}
+				
+				//ArrayList<String> n = new ArrayList<String>();
+				for(int i=20; i<=28; i++)
+				{
+					//n.add(record.get(i));
+					example.add(record.get(i));
+				}
+				
+				//ArrayList<String> p = new ArrayList<String>();
+				for(int i=29; i<=37; i++)
+				{
+					//p.add(record.get(i));
+					example.add(record.get(i));
+				}
+				
+				
 				
 				data.add(example);
 				
