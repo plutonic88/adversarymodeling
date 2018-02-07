@@ -17,13 +17,14 @@ import games.MixedStrategy;
 import games.OutcomeDistribution;
 import games.OutcomeIterator;
 import groupingtargets.ClusterTargets;
+import kmeans.KmeanClustering;
 import matlabcontrol.MatlabConnectionException;
 import matlabcontrol.MatlabInvocationException;
 import matlabcontrol.MatlabProxy;
 import matlabcontrol.MatlabProxyFactory;
 import solvers.QRESolver;
 import solvers.SolverUtils;
-import subgame.Parameters;
+
 
 public class AdversaryModelExps {
 
@@ -670,6 +671,60 @@ public class AdversaryModelExps {
 
 	}
 
+
+	private static double estimateFlipItLambdaV2(HashMap<Integer, Integer> ni, int n, HashMap<Integer, Double> ui, MatlabProxy proxy) throws MatlabConnectionException, MatlabInvocationException
+	{
+
+
+
+		//Set a variable, add to it, retrieve it, and print the result
+
+		proxy.eval("syms lambda");
+
+		proxy.setVariable("n",n);
+		// set ni variables
+		String n_i [] = new String[ni.size()];
+		for(int i=0; i<ni.size(); i++)
+		{
+			n_i[i] = "n"+i;
+			proxy.setVariable(n_i[i], ni.get(i));
+
+		}
+
+		// set ui variables
+		String u_i [] = new String[ui.size()];
+		for(int i=0; i<ui.size(); i++)
+		{
+			u_i[i] = "u"+i;
+			proxy.setVariable(u_i[i], ui.get(i));
+
+		}
+
+
+		//Eq1 = 0 == (exp(lambda*U1) + exp(lambda*U2) + exp(lambda*U3)) * ((N1*U1)+(N2*U2)+(N3*U3)) - N*(exp(lambda*U1)*(U1) + exp(lambda*U2)*(U2) + exp(lambda*U2)*(U2));
+		// build the equation string
+		//Eq1 = 0 ==(exp( lambda *u1)+exp( lambda *u2)+exp( lambda *u3))*((n1*u1)+(n2*u2)+(n3*u3))-n*(exp( lambda *u1)*u1+exp( lambda *u2)*u2+exp( lambda *u3)*u3)
+
+
+		String eqn = buildFlipItEqnString(ui, ni, u_i, n_i);
+
+		System.out.println("\n"+eqn);
+
+		proxy.eval(eqn);
+		proxy.eval("symlambda = solve(Eq1, lambda)");
+
+		proxy.eval("dlambda = double(symlambda)");
+
+		double result = ((double[]) proxy.getVariable("dlambda"))[0];
+		System.out.println("\nlambda: " + result);
+
+		
+
+
+		return result;
+
+	}
+
 	private static String buildEqnString(HashMap<Integer,Double> ui, HashMap<Integer,Integer> ni, String[] u_i, String[] n_i) {
 
 		String eqn = "Eq1 = 0 ==";
@@ -1120,9 +1175,9 @@ public class AdversaryModelExps {
 
 		int personality = 	-1;
 		int user_refine_type = 1;
-		
-		
-		
+
+
+
 		ArrayList<String> users_refined_type = refineUsers(users_refined, data, user_refine_type, personality);
 		//ArrayList<String> users_lowscore = refineUsers(users_refined, data, 0, personality);
 
@@ -1132,51 +1187,51 @@ public class AdversaryModelExps {
 
 
 		// list the game play of the users
-		
+
 		//users_refined = users_refined_type;
-		
+
 		// keep 50
-		
+
 		int remove = 0;
-		
+
 		int keep = users_refined.size() - remove;
-		
+
 		// keep 0 to 50
-		
+
 		int keepstart = 121;
 		int keepend = 154;
-		
+
 		users_refined.clear();
-		
+
 		double sumscore = 0;
-		
+
 		double sum_mscore =0;
 		double sum_nscore = 0;
 		double sum_pscore = 0;
-		
-		
+
+
 		for(int i=keepstart; i<keepend; i++)
 		{
 			users_refined.add(users_refined_type.get(i));
-			
+
 			String tmpusr = users_refined_type.get(i);
-			
+
 			sumscore += getUserScore(tmpusr, data_refined);
-			
+
 			sum_mscore += getPersonalityScore(tmpusr, data_refined, 0);
 			sum_nscore += getPersonalityScore(tmpusr, data_refined, 1);
 			sum_pscore += getPersonalityScore(tmpusr, data_refined, 2);
-			
-			
+
+
 			System.out.println("kept user "+ tmpusr);
 		}
-		
+
 		sumscore /= users_refined.size();
 		sum_mscore /= users_refined.size();
 		sum_nscore /= users_refined.size();
 		sum_pscore /= users_refined.size();
-		
-		
+
+
 
 		HashMap<String, Integer> att_game_play = buildOneStageGamePlay(users_refined, data_refined, 1);
 		//HashMap<String, int[][]> def_game_play = buildGamePlay(users_refined, data_refined, 0);
@@ -1226,8 +1281,8 @@ public class AdversaryModelExps {
 		double estimatedlambda = estimateFlipItLambda(ni, n, ui);
 
 		System.out.println("Estimated lambda "+ estimatedlambda + ", avg score "+ sumscore);
-		
-		
+
+
 		try
 		{
 			PrintWriter pw = new PrintWriter(new FileOutputStream(new File("iter-lambda.csv"),true));
@@ -1260,7 +1315,7 @@ public class AdversaryModelExps {
 			int user_refine_type, int personality) {
 
 
-		
+
 		ArrayList<String> sorted_users = new ArrayList<String>();
 
 
@@ -1334,12 +1389,12 @@ public class AdversaryModelExps {
 				double mscore = getPersonalityScore(tmpusr,data, 0);
 				double nscore = getPersonalityScore(tmpusr,data, 1);
 				double pscore = getPersonalityScore(tmpusr,data, 2);
-				
+
 				System.out.println("user "+ tmpusr + " m: "+ mscore + ", n: "+ nscore + ", p: "+ pscore);
-				
-				
+
+
 				double maxp = (( (mscore>=nscore)?mscore:nscore)>=pscore)?(((mscore>=nscore)?mscore:nscore)):pscore;
-				
+
 				if(maxp==mscore && personality==0)
 				{
 					System.out.println("User "+ tmpusr + ", max mscore " + mscore);
@@ -1368,7 +1423,7 @@ public class AdversaryModelExps {
 					userindex++;
 				}
 
-				
+
 			}
 
 			// sort the users
@@ -1393,10 +1448,10 @@ public class AdversaryModelExps {
 
 
 	private static double getPersonalityScore(String tmpusr, ArrayList<ArrayList<String>> data, int personality) {
-		
+
 		int start =-1;
 		int end = -1;
-		
+
 		if(personality==0)
 		{
 			start = AdversaryModel.M_START_INDEX;
@@ -1412,28 +1467,38 @@ public class AdversaryModelExps {
 			start = AdversaryModel.P_START_INDEX;
 			end = AdversaryModel.P_END_INDEX;
 		}
-		
-		
+
+
 		for(ArrayList<String> example: data)
 		{
 			if(example.get(Headers_minimum.user_id.getValue()).equals(tmpusr))
 			{
 				double sum = 0;
+				int count = 0;
 				for(int i=start; i<=end; i++)
 				{
 					String s = example.get(i);
 					if(!s.equals(" "))
 					{
-						sum += Integer.parseInt(s);
+
+
+						int choice = Integer.parseInt(s);
+						int score = AdversaryModel.scoremap.get(choice);
+						if(((i-10)==11) || ((i-10)==15) || ((i-10)==17) || ((i-10)==20) || ((i-10)==25))
+						{
+							score = choice;
+						}
+						count++;
+						sum += score;
 					}
 				}
-				sum /= 9.0;
+				sum = sum/count;
 				return sum;
 
 			}
-				
+
 		}
-		
+
 		return -1;
 	}
 
@@ -1462,7 +1527,7 @@ public class AdversaryModelExps {
 		}
 		return srted;
 	}
-	
+
 	public static double[][] sortUsersDescD(ArrayList<double[]> users) 
 	{
 
@@ -1488,7 +1553,7 @@ public class AdversaryModelExps {
 		}
 		return srted;
 	}
-	
+
 	public static int[][] sortUsersAsc(ArrayList<int[]> users) 
 	{
 
@@ -1514,7 +1579,7 @@ public class AdversaryModelExps {
 		}
 		return srted;
 	}
-	
+
 	public static double[][] sortUsersAscD(ArrayList<double[]> users) 
 	{
 
@@ -1669,6 +1734,330 @@ public class AdversaryModelExps {
 		return ui;
 
 
+	}
+
+	public static void computeLambdaExps() throws MatlabConnectionException, MatlabInvocationException {
+
+		// create the data
+		/**
+		 * 1. load user data
+		 * 2. prepare data for clustering 2d data (normalize the data)
+		 * 3. cluster
+		 * 4. For each cluster compute lambda
+		 * 
+		 */
+		int k= 3; // how many clusters you want
+
+		ArrayList<ArrayList<String>> data =  Data.readData();
+
+		ArrayList<String> users_refined = refineUser(data, -1, 1);
+
+		ArrayList<ArrayList<String>>  data_refined = refineData(data,1);
+
+		double[][] examples = prepareExamplesDTScorePoints(data_refined, users_refined);
+
+		printData(users_refined,examples);
+
+		// normalize the data
+
+		double normalizedexamples[][] = normalizeData(examples);
+
+		System.out.println("Normalized data: ");
+
+		printData(users_refined, normalizedexamples);
+
+
+		/*double[][] dummydata = new double[6][4];
+
+		dummydata[0][0] = 1.0;
+		dummydata[0][1] = 2.0;
+		dummydata[0][2] = 3.0;
+		dummydata[0][3] = 5.0;
+
+		dummydata[1][0] = 1.0;
+		dummydata[1][1] = 2.0;
+		dummydata[1][2] = 3.0;
+		dummydata[1][3] = 5.0;
+
+
+
+		dummydata[2][0] = 7.0;
+		dummydata[2][1] = 8.0;
+		dummydata[2][2] = 9.0;
+		dummydata[2][3] = 10.0;
+
+		dummydata[3][0] = 7.0;
+		dummydata[3][1] = 8.0;
+		dummydata[3][2] = 9.0;
+		dummydata[3][3] = 10.0;
+
+
+		dummydata[4][0] = 1.0;
+		dummydata[4][1] = 3.0;
+		dummydata[4][2] = 2.0;
+		dummydata[4][3] = 1.0;
+
+		dummydata[5][0] = 1.0;
+		dummydata[5][1] = 3.0;
+		dummydata[5][2] = 2.0;
+		dummydata[5][3] = 1.0;*/
+
+
+		List<Double>[] clusters = KmeanClustering.clusterUsersV2(k, normalizedexamples);
+
+		printClusters(clusters);
+
+		//Create a proxy, which we will use to control MATLAB
+		/*MatlabProxyFactory factory = new MatlabProxyFactory();
+		MatlabProxy proxy = factory.getProxy();
+*/
+
+		for(int cluster=0; cluster<k; cluster++)
+		{
+			ArrayList<String> users_groups = getUserGroup(clusters[cluster], users_refined);
+
+
+			HashMap<String, Integer> att_game_play = buildOneStageGamePlay(users_groups, data_refined, 1);
+			//HashMap<String, int[][]> def_game_play = buildGamePlay(users_refined, data_refined, 0);
+			//HashMap<String, int[][]> reward = buildGameRewards(users_refined, data_refined);
+
+			printOneStageGamePlay(att_game_play);
+
+			HashMap<String, HashMap<String, Double>> strategy = Data.readStrategy("g5d5_FI.txt");
+			String key = "EMPTY EMPTY"; 
+			HashMap<String, Double> probs = strategy.get(key);
+
+			//AdversaryModel.computeLambda(users_refined, att_game_play, def_game_play,reward, data_refined, 4);
+
+			HashMap<Integer, Double > ui = attExpPayoffs(att_game_play, probs);
+
+
+			//ArrayList<ArrayList<String>> data = Data.readData(lambda);
+
+			HashMap<Integer, Integer> ni = computeFLipItNi(att_game_play);
+
+			//HashMap<Integer, Double> ui = computeUi(data);
+
+			int n=users_groups.size();
+
+			double A=0;
+			for(int action=0; action <6; action++)
+			{
+				double u = ui.get(action);
+				double n_i = ni.get(action);
+
+				A += (u*n_i);
+			}
+
+			double B = A/n;
+
+			double[] coeffs = new double[6];
+
+			for(int i=0; i<6; i++)
+			{
+				coeffs[i] = B-ui.get(i);
+			}
+
+
+
+			//int x=0;
+
+			double estimatedlambda = estimateFlipItLambda(ni, n, ui);
+			
+			//Disconnect the proxy from MATLAB
+			//proxy.disconnect();
+			
+			
+			
+			double sumscore = 0;
+
+			double sum_mscore =0;
+			double sum_nscore = 0;
+			double sum_pscore = 0;
+
+
+			for(int i=0; i<users_groups.size(); i++)
+			{
+				
+
+				String tmpusr = users_groups.get(i);
+
+				sumscore += getUserScore(tmpusr, data_refined);
+
+				sum_mscore += getPersonalityScore(tmpusr, data_refined, 0);
+				sum_nscore += getPersonalityScore(tmpusr, data_refined, 1);
+				sum_pscore += getPersonalityScore(tmpusr, data_refined, 2);
+
+
+				System.out.println("kept user "+ tmpusr);
+			}
+
+			sumscore /= users_refined.size();
+			sum_mscore /= users_refined.size();
+			sum_nscore /= users_refined.size();
+			sum_pscore /= users_refined.size();
+			
+			
+
+			System.out.println("Cluster "+cluster+", user count "+users_groups.size()+", lambda "+ estimatedlambda);
+
+
+			try
+			{
+				PrintWriter pw = new PrintWriter(new FileOutputStream(new File("cluster-lambda.csv"),true));
+				// gamenumber, subgame, psne, meb,qre
+				pw.append(cluster+","+users_groups.size()+","+ estimatedlambda+","+sumscore+","+sum_mscore+","+sum_nscore+","+sum_pscore+"\n");
+				pw.close();
+			}
+			catch(Exception ex)
+			{
+				System.out.println(" ");
+			}
+
+		}
+
+		// for each of the user groups compute lambda
+
+
+
+
+
+
+
+	}
+
+	private static ArrayList<String> getUserGroup(List<Double> list, ArrayList<String> users_refined) {
+
+
+		ArrayList<String> users = new ArrayList<String>();
+
+		for(double index: list)
+		{
+			users.add(users_refined.get((int)index));
+		}
+
+		return users;
+
+
+	}
+
+	private static void printClusters(List<Double>[] clusters) {
+
+
+		System.out.println();
+		for(int i=0; i<clusters.length; i++)
+		{
+			System.out.print("cluster "+i + ": ");
+			for(Double x: clusters[i])
+			{
+				System.out.print(x.intValue()+", ");
+			}
+			System.out.println();
+		}
+
+
+
+
+	}
+
+	private static double[][] normalizeData(double[][] examples) {
+
+
+		double[][] normalizedExamples = new double[examples.length][examples[0].length];
+
+		for(int feature=0; feature<examples[0].length; feature++)
+		{
+			double dataLowHigh[] = getDataLow(examples, feature);
+			double normalizedLowHigh[] = {0.0, 10};
+			//System.out.println("Feature  "+ feature + ", low "+ dataLowHigh[0] + ", high "+ dataLowHigh[1]);
+
+			for(int row=0; row<examples.length; row++)
+			{
+				double normx = normalize(examples[row][feature], dataLowHigh[0], dataLowHigh[1], normalizedLowHigh[0], normalizedLowHigh[1]);
+				normalizedExamples[row][feature] = normx;
+				System.out.println("Feature  "+ feature + ", low "+ dataLowHigh[0] + ", high "+ dataLowHigh[1] + ", value "+examples[row][feature]+ ", normval "+ normx);
+			}
+
+		}
+
+		return normalizedExamples;
+
+	}
+
+	private static double[] getDataLow(double[][] examples, int feature) {
+
+		double[] lowhigh = {Double.MAX_VALUE, Double.MIN_VALUE};
+
+		for(int row=0; row<examples.length; row++)
+		{
+			if(examples[row][feature]<lowhigh[0])
+			{
+				lowhigh[0] = examples[row][feature];
+			}
+			else if(examples[row][feature]>lowhigh[1])
+			{
+				lowhigh[1] = examples[row][feature];
+			}
+		}
+		return lowhigh;
+	}
+
+	/**
+	 * 
+	 * @param x
+	 * @param dataLow
+	 * @param dataHigh
+	 * @param normalizedLow
+	 * @param normalizedHigh
+	 * @return
+	 */
+	public static double normalize(double x, double dataLow, double dataHigh, double normalizedLow, double normalizedHigh ) 
+	{
+		return ((x - dataLow) 
+				/ (dataHigh - dataLow))
+				* (normalizedHigh - normalizedLow) + normalizedLow;
+	}
+
+	private static void printData(ArrayList<String> users_refined, double[][] examples) {
+
+		for(int i=0; i<examples.length; i++)
+		{
+			System.out.println("user "+ i + ", mscore "+ examples[i][0] + ", nscore "+ examples[i][1]+ ", pscore "
+					+ examples[i][2] + ", points "+ examples[i][3]);
+		}
+
+	}
+
+	/**
+	 * prepare data for clustering using DT score and points
+	 * @param data_refined
+	 * @param users_refined
+	 * @return
+	 */
+	private static double[][] prepareExamplesDTScorePoints(ArrayList<ArrayList<String>> data_refined,
+			ArrayList<String> users_refined) {
+
+		double[][] examples = new double[users_refined.size()][4];
+
+		/**
+		 * for each user compute DT scores 
+		 */
+
+		int userindex = 0;
+		for(String usr_id: users_refined)
+		{
+			double mscore = getPersonalityScore(usr_id, data_refined, 0);
+			double nscore = getPersonalityScore(usr_id, data_refined, 1);
+			double pscore = getPersonalityScore(usr_id, data_refined, 2);
+			double totalpoints = getUserScore(usr_id, data_refined);
+
+			examples[userindex][0] = mscore;
+			examples[userindex][1] = nscore;
+			examples[userindex][2] = pscore;
+			examples[userindex][3] = totalpoints;
+			userindex++;
+		}
+		return examples;
 	}
 
 }

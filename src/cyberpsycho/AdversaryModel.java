@@ -15,6 +15,8 @@ public class AdversaryModel {
 	public final static int N_END_INDEX = 28;
 	public final static int P_START_INDEX = 29;
 	public final static int P_END_INDEX = 37;
+	
+	public static HashMap<Integer, Integer> scoremap = new HashMap<Integer,Integer>();
 
 
 	/**
