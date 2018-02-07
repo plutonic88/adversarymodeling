@@ -2,6 +2,7 @@ package cyberpsycho;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.InputStreamReader;
@@ -11,6 +12,10 @@ import java.util.HashMap;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
+
+import weka.core.Instances;
+import weka.core.converters.ArffSaver;
+import weka.core.converters.CSVLoader;
 
 public class Data {
 	
@@ -427,6 +432,69 @@ public class Data {
 		
 		return strategy;
 		
+	}
+	
+private static Instances generateInstance(int iter, int k, double[][] examples) {
+		
+		
+		try {
+		
+		
+
+		 CSVLoader csvload = new CSVLoader();
+		 csvload.setSource(new File("result/realdata"+iter+".csv"));
+		 Instances data = csvload.getDataSet();
+		 
+		 
+		 ArffSaver arf = new ArffSaver();
+		 arf.setInstances(data);
+		 
+		 File f = new File("result/newdata"+iter+".arff");
+		 
+		 if(f.exists())
+		 {
+			 f.delete();
+			 f.createNewFile();
+		 }
+		 
+		 arf.setFile(f);
+		 arf.writeBatch();
+		
+		
+		
+		
+		
+		
+		
+		FileInputStream fstream = new FileInputStream("result/newdata"+iter+".arff");
+		DataInputStream in = new DataInputStream(fstream);
+		BufferedReader br = new BufferedReader(new InputStreamReader(in));
+		// Read all the instances in the file (ARFF, CSV, XRFF, ...)
+		 //DataSource source = new DataSource(br);
+		 Instances instances = new Instances(br);
+		 return instances;
+		 // Print header and instances.
+		// System.out.println("\nDataset:\n");
+		/* System.out.println(instances.toSummaryString());
+		 
+		 SimpleKMeans model = new SimpleKMeans();
+		 model.setNumClusters(10);
+		 model.buildClusterer(instances);
+		 model.setDistanceFunction(new weka.core.ManhattanDistance());
+		 System.out.println(model);
+		 //MakeDensityBasedClusterer dc = new MakeDensityBasedClusterer();
+		 EM dc = new EM();
+		// instances.remove(0); // remove the base
+		 dc.setNumClusters(k-1);
+		 dc.buildClusterer(instances);
+		 System.out.println(dc);*/
+		}
+		catch(Exception e)
+		{
+			System.out.println(e.toString());
+		}
+		
+		return null;
 	}
 	
 	

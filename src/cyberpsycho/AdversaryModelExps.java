@@ -18,6 +18,7 @@ import games.OutcomeDistribution;
 import games.OutcomeIterator;
 import groupingtargets.ClusterTargets;
 import kmeans.KmeanClustering;
+import kmeans.Weka;
 import matlabcontrol.MatlabConnectionException;
 import matlabcontrol.MatlabInvocationException;
 import matlabcontrol.MatlabProxy;
@@ -1736,7 +1737,7 @@ public class AdversaryModelExps {
 
 	}
 
-	public static void computeLambdaExps() throws MatlabConnectionException, MatlabInvocationException {
+	public static void computeLambdaExps() throws Exception {
 
 		// create the data
 		/**
@@ -1802,10 +1803,22 @@ public class AdversaryModelExps {
 		dummydata[5][2] = 2.0;
 		dummydata[5][3] = 1.0;*/
 
+		
+		List<Integer>[] clusters = Weka.clusterUsers(k,normalizedexamples);
+		
+		
 
-		List<Double>[] clusters = KmeanClustering.clusterUsersV2(k, normalizedexamples);
+		//List<Integer>[] clusters = KmeanClustering.clusterUsersV2(k, normalizedexamples);
+		
+		
+		printClustersInt(clusters);
+		
+		
+		/**
+		 * next use weka to cluster
+		 */
 
-		printClusters(clusters);
+		//printClusters(clusters);
 
 		//Create a proxy, which we will use to control MATLAB
 		/*MatlabProxyFactory factory = new MatlabProxyFactory();
@@ -1892,10 +1905,10 @@ public class AdversaryModelExps {
 				System.out.println("kept user "+ tmpusr);
 			}
 
-			sumscore /= users_refined.size();
-			sum_mscore /= users_refined.size();
-			sum_nscore /= users_refined.size();
-			sum_pscore /= users_refined.size();
+			sumscore /= users_groups.size();
+			sum_mscore /= users_groups.size();
+			sum_nscore /= users_groups.size();
+			sum_pscore /= users_groups.size();
 			
 			
 
@@ -1905,7 +1918,9 @@ public class AdversaryModelExps {
 			try
 			{
 				PrintWriter pw = new PrintWriter(new FileOutputStream(new File("cluster-lambda.csv"),true));
-				// gamenumber, subgame, psne, meb,qre
+				
+				pw.append("cluster,#users,lambda,score,mscore,nscore,pscore"+ "\n");
+				
 				pw.append(cluster+","+users_groups.size()+","+ estimatedlambda+","+sumscore+","+sum_mscore+","+sum_nscore+","+sum_pscore+"\n");
 				pw.close();
 			}
@@ -1920,13 +1935,9 @@ public class AdversaryModelExps {
 
 
 
-
-
-
-
 	}
 
-	private static ArrayList<String> getUserGroup(List<Double> list, ArrayList<String> users_refined) {
+	private static ArrayList<String> getUserGroup(List<Integer> list, ArrayList<String> users_refined) {
 
 
 		ArrayList<String> users = new ArrayList<String>();
@@ -1949,6 +1960,25 @@ public class AdversaryModelExps {
 		{
 			System.out.print("cluster "+i + ": ");
 			for(Double x: clusters[i])
+			{
+				System.out.print(x.intValue()+", ");
+			}
+			System.out.println();
+		}
+
+
+
+
+	}
+	
+	private static void printClustersInt(List<Integer>[] clusters) {
+
+
+		System.out.println();
+		for(int i=0; i<clusters.length; i++)
+		{
+			System.out.print("cluster "+i + ": ");
+			for(Integer x: clusters[i])
 			{
 				System.out.print(x.intValue()+", ");
 			}

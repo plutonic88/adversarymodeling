@@ -29,11 +29,11 @@ import util.GamutModifier;
 
 public class KmeanClustering {
 
-	private static  boolean RAND_POINTS_FROM_OBSERVATION = true; 
-	private static  boolean RAND_ACTION_INIT_TO_CLUSTERS = false;
-	private static  boolean DIST_METRIC_LINE = true; //used to create dir, if this is true, then other one is false, vice versa
-	private static  boolean DIST_METRIC_EUCLIDEAN =  false;
-	private static  boolean MAX_DIST = true;   //make it false if euclidean
+	private static  boolean RAND_POINTS_FROM_OBSERVATION = true; //RMFO
+	private static  boolean RAND_ACTION_INIT_TO_CLUSTERS = false ; // reic
+	private static  boolean DIST_METRIC_LINE = false; //used to create dir, if this is true, then other one is false, vice versa
+	private static  boolean DIST_METRIC_EUCLIDEAN =  true;
+	private static  boolean MAX_DIST = false;   //make it false if euclidean
 	private static  final boolean SUM_DIST = false; //make it false if euclidean
 	private static  boolean MAX_DELTA = true; 
 	private static  boolean AVRG_DELTA = false;
@@ -1414,7 +1414,7 @@ public class KmeanClustering {
 	 * @param mg
 	 * @return
 	 */
-	public static List<Double>[] clusterUsersV2(int numberofclusters, double[][] examples )
+	public static List<Integer>[] clusterUsersV2(int numberofclusters, double[][] examples )
 	{
 
 		//int opponent = 1^player;
@@ -1576,16 +1576,16 @@ public class KmeanClustering {
 			if(runningInstance>=100)
 			{
 
-				List<Double>[] finalcluster = new List[numberofclusters];
+				List<Integer>[] finalcluster = new List[numberofclusters];
 				for(int i=0; i< numberofclusters; i++){
 
-					finalcluster[i] = new ArrayList<Double>(); 
+					finalcluster[i] = new ArrayList<Integer>(); 
 				}
 				for(int i=0; i<numberofclusters; i++)
 				{
 					for(Double[] x: clusters[i])
 					{
-						finalcluster[i].add(x[0]);
+						finalcluster[i].add(x[0].intValue());
 					}
 				}
 
@@ -1889,16 +1889,16 @@ public class KmeanClustering {
 		pw.write(actions);
 		pw.close();
 
-		List<Double>[] finalcluster = new List[numberofclusters];
+		List<Integer>[] finalcluster = new List[numberofclusters];
 		for(int i=0; i< numberofclusters; i++){
 
-			finalcluster[i] = new ArrayList<Double>(); 
+			finalcluster[i] = new ArrayList<Integer>(); 
 		}
 		for(int i=0; i<numberofclusters; i++)
 		{
 			for(Double[] x: clusters[i])
 			{
-				finalcluster[i].add(x[0]);
+				finalcluster[i].add(x[0].intValue());
 			}
 		}
 
