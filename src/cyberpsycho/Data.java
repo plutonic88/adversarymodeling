@@ -340,8 +340,8 @@ public class Data {
 					 def_seq = def_seq.replace(" ", "");
 					 att_seq = att_seq.replace(" ", "");
 					 
-					 System.out.println("Def Action sequence "+ def_seq);
-					 System.out.println("Att Action sequence "+ att_seq);
+					// System.out.println("Def Action sequence "+ def_seq);
+					// System.out.println("Att Action sequence "+ att_seq);
 					 
 					// System.out.println();
 					 
@@ -377,7 +377,7 @@ public class Data {
 						double prob = Double.parseDouble(arr[1]) ;
 
 						
-						System.out.println(action+":"+prob);
+						//System.out.println(action+":"+prob);
 
 						bhv_strat.put(action, prob);
 
@@ -419,7 +419,7 @@ public class Data {
 					
 					
 					
-					System.out.println();
+					//System.out.println();
 				
 				
 				
