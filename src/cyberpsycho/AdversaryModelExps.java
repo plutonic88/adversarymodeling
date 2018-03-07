@@ -1819,8 +1819,8 @@ public class AdversaryModelExps {
 		ArrayList<ArrayList<String>>  data_refined = refineData(data,1, users_refined);
 
 		//double[][] examples = prepareExamplesDTScorePoints(data_refined, users_refined);
-		//double[][] examples = prepareExamplesNodeCostPoint(data_refined, users_refined);
-		double [][] examples = prepareFrquencey(data_refined, users_refined, numberofnodes);
+		double[][] examples = prepareExamplesNodeCostPoint(data_refined, users_refined);
+		//double [][] examples = prepareFrquencey(data_refined, users_refined, numberofnodes);
 
 		printData(users_refined,examples);
 
@@ -2112,19 +2112,19 @@ public class AdversaryModelExps {
 
 					String def_order = tmpexample.get(Headers_minimum.pick_def_order.getValue());
 					int gameinstance = Integer.parseInt(tmpexample.get(Headers_minimum.game_instance.getValue()));
-					//int round =  Integer.parseInt(tmpexample.get(Headers_minimum.round.getValue()));
+					int round =  Integer.parseInt(tmpexample.get(Headers_minimum.round.getValue()));
 					String action = tmpexample.get(Headers_minimum.attacker_action.getValue());
 					int attackaction = 0;
 					if(!action.equals(" "))
 					{
 						attackaction = Integer.parseInt(action);
 					}
-					if(def_order.equals("0") && (gameinstance>=4)) // asc, take 4th game instance to 6th
+					if(def_order.equals("0") && (gameinstance>=4) /*&& round==1*/) // asc, take 4th game instance to 6th
 					{
 						count[attackaction]++;
 
 					}
-					else if(def_order.equals("1") && (gameinstance<=3)) // desc, take 1st game instance to 3rd
+					else if(def_order.equals("1") && (gameinstance<=3) /*&& round==1*/) // desc, take 1st game instance to 3rd
 					{
 						count[attackaction]++;
 					}
@@ -2216,7 +2216,7 @@ public class AdversaryModelExps {
 
 
 
-					if(def_order.equals("0") && (gameinstance>=4)) // asc, take 4th game instance to 6th
+					if(def_order.equals("0") && (gameinstance>=4) /*&& round==1*/) // asc, take 4th game instance to 6th
 					{
 						System.out.println("instance "+gameinstance +", round "+ round);
 						//int featuregameinstance = gameinstance-4;
@@ -2232,7 +2232,7 @@ public class AdversaryModelExps {
 
 
 					}
-					else if(def_order.equals("1") && (gameinstance<=3)) // desc, take 1st game instance to 3rd
+					else if(def_order.equals("1") && (gameinstance<=3)/* && round==1*/) // desc, take 1st game instance to 3rd
 					{
 						System.out.println("instance "+gameinstance +", round "+ round);
 						//int featuregameinstance = gameinstance-1;
