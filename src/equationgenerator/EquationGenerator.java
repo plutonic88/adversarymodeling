@@ -10,7 +10,7 @@ public class EquationGenerator {
 
 	public static void main(String[] args) throws Exception 
 	{
-		int DEPTH_LIMIT = 4;
+		int DEPTH_LIMIT = 2;
 		int naction = 2;
 		DNode root = createGameTree(DEPTH_LIMIT, naction);
 		System.out.println("Node id "+ root.nodeid + ", parent : "+ null + ", player "+ 0);
@@ -22,41 +22,181 @@ public class EquationGenerator {
 		HashMap<String, InfoSet> ISets = prepareInfoSet(I);
 
 		printISets(ISets);
-		
+
 		assignRewardToLeafNodes(ISets, root);
 
 		//varify it
-		expUtility(I.get("d3_p1_3"), 0, root, ISets, "d3_p1_3");
-		
-		
+		//expUtility( 1, root, ISets, "d3_p1_3");
+
+
+		// equation for an action in an information set
+		//generateEqnInInformationSet(ISets, "d3_p1_3", 0 , root, "x(3)", "d3_p1_3_0");
+
+
 		printMatLabCode(ISets, root);
+
+
+	}
+
+	private static String generateEqnInInformationSet(HashMap<String, InfoSet> iSets, String infosetname, int action, DNode root, String variable, String prob) {
+
+
+		// get the information set
+		// get the variable for that action
+		// get the probability for the action
+		// u(action') - u(actoin)
+
+
+
+		InfoSet infoset = iSets.get(infosetname);
+
+		int naction = infoset.nodes.get(0).child.size();
+
+		HashMap<Integer, String> exputilities = new HashMap<Integer, String>();
+
+		//System.out.println("\nInfoset name "+ infosetname);
+		for(int i =0; i<naction ; i++)
+		{
+			String expu_action = expUtility(i, root, iSets, infosetname);
+
+			//System.out.println("Action "+ i + ", expected utility "+ expu_action);
+
+			exputilities.put(i, expu_action);
+
+		}
+
+
+		String eqn = "";
+		for(int i =0; i<naction ; i++)
+		{
+
+
+
+			String expterm = "";
+
+			if(i!=action)
+			{
+				expterm = "exp(lambda*("+ "("+exputilities.get(i) +") - " +  "(" + exputilities.get(action) + ")" + "))"; 
+			}
+			else
+			{
+				expterm = "1"; 
+			}
+
+			if(i!=0)
+			{
+				eqn =  eqn +" + "+expterm;
+			}
+			else
+			{
+				eqn =  eqn + expterm;
+			}
+		}
+
+
+		eqn = "resposne_"+prob +" = "+  variable +"*("+ eqn + ") - 1" ;
+
+		//System.out.println("Eqn for variable "+ variable + ": "+ eqn);
+
+
+		return eqn;
+
+
+
+
+
+
+
+
+
 
 
 	}
 
 	private static void assignRewardToLeafNodes(HashMap<String,InfoSet> iSets, DNode root) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	private static void printMatLabCode(HashMap<String,InfoSet> iSets, DNode root) {
-		
-		
+
+
 		// print initialization
-		
-		
+
+
 		for(InfoSet iset: iSets.values())
 		{
+
+			ArrayList<String> doneprobs = new ArrayList<String>();
 			for(Integer nodeid: iset.qre_var.keySet())
 			{
+
+
 				String qre_prob = iset.qre_prob.get(nodeid);
 				String qre_var = iset.qre_var.get(nodeid);
-				
-				System.out.println(qre_prob +" = "+ qre_var);
+
+				if(!doneprobs.contains(qre_prob))
+				{
+					System.out.println(qre_prob +" = "+ qre_var);
+					doneprobs.add(qre_prob);
+				}
+
+
+
 			}
 		}
-		
-		
+
+
+
+		// print equations for every action in every information set
+		// equation for an action in an information set
+		//generateEqnInInformationSet(ISets, "d3_p1_3", 0 , root, I, "x(3)", "d3_p1_3_0");
+
+		for(InfoSet iset: iSets.values())
+		{
+			// find the player
+			System.out.println("\n");
+			
+			ArrayList<String> doneprobs = new ArrayList<String>();
+			for(Integer nodeid: iset.qre_prob.keySet())
+			{
+
+				String qre_prob = iset.qre_prob.get(nodeid);
+				String qre_var = iset.qre_var.get(nodeid);
+
+
+
+				String[] x = qre_prob.split("_");
+				int action = Integer.parseInt(qre_prob.split("_")[3]);
+
+
+				if(!doneprobs.contains(qre_prob))
+				{
+
+					if(iset.player==0)
+					{
+						System.out.println("response_"+iset.qre_prob.get(nodeid) + " = " + iset.qre_prob.get(nodeid));
+					}
+					else if(iset.player==1)
+					{
+						String eqn = generateEqnInInformationSet(iSets, iset.id, action , root, qre_var, qre_prob);
+						System.out.println("response_"+qre_prob + " = " + eqn);
+
+					}
+					doneprobs.add(qre_prob);
+					
+				}
+
+			}
+
+
+
+
+		}
+
+
+
+
 	}
 
 	private static void printISets(HashMap<String,InfoSet> iSets) 
@@ -75,7 +215,7 @@ public class EquationGenerator {
 			{
 				System.out.println(nodeid + " prob:  "+ iset.qre_prob.get(nodeid));
 			}
-			
+
 			for(Integer nodeid: iset.qre_var.keySet())
 			{
 				System.out.println(nodeid + " var :  "+ iset.qre_var.get(nodeid));
@@ -106,8 +246,8 @@ public class EquationGenerator {
 		int depth = nodes.get(0).depth;
 
 		InfoSet obj = new InfoSet(player, depth, is);
-		
-		
+
+
 		for(DNode n: nodes)
 		{
 			n.infoset = is;
@@ -143,7 +283,7 @@ public class EquationGenerator {
 							obj.qre_prob.put(child.nodeid, is+"_"+child.prevaction);
 							obj.qre_var.put(child.nodeid, "x("+InfoSet.varcount+")");
 						}
-						
+
 					}
 				}
 				InfoSet.varcount++;
@@ -155,84 +295,86 @@ public class EquationGenerator {
 		return obj;
 	}
 
-	private static void expUtility(ArrayList<DNode> Infoset, int action, DNode root, HashMap<String,InfoSet> iSets, String infosetname)
+	private static String expUtility(int action, DNode root, HashMap<String,InfoSet> iSets, String infosetname)
 	{
 		String exputility = "";
 		String probtoreach = "";
 		String continuationvalue = "";
 		int nodecount = 0;
-		for(DNode node: Infoset)
+		for(DNode node: iSets.get(infosetname).nodes)
 		{
 			// for node find the probability to reach the information set
 			probtoreach = getProbToReachInfoNode(node, root, iSets, infosetname);
-			
+
 			if(probtoreach.equals(""))
 			{
 				probtoreach = "1";
 			}
-			
+
 			//System.out.println("\nNode "+ node.nodeid + ", Infoset "+ node.infoset + ", prob to reach : "+ probtoreach);
-			
-			
+
+
 			// consider prob of playing action 1
 			// play the continuation game
 			DNode nextroot = node.child.get(action);
 			continuationvalue = playContinuationGame(nextroot, "", iSets);
 			nodecount++;
-			
-			System.out.println("\nInfoset "+ infosetname);
+
+			/*System.out.println("\nInfoset "+ infosetname);
 			System.out.println("In node "+ node.nodeid);
 			System.out.println("Prob to reach infoset "+probtoreach);
-			System.out.println("Continuation value "+continuationvalue);
-			
-			
+			System.out.println("Continuation value "+continuationvalue);*/
+
+
 			exputility += probtoreach +"*("+continuationvalue + ")";
-			if(nodecount< Infoset.size())
+			if(nodecount< iSets.get(infosetname).nodes.size())
 			{
 				exputility += "+";
 			}
 		}
-		
-		
-		
-		System.out.println("\nEXP : "+exputility+"\n");
+
+
+
+		//System.out.println("\nEXP : "+exputility+"\n");
+
+		return exputility;
 
 
 	}
 
 	private static String playContinuationGame(DNode nextroot, String conplay, HashMap<String,InfoSet> iSets) {
-		
-		
-		
+
+
+
 		if(nextroot.leaf)
 			return nextroot.attacker_reward+"";
-		
+
 		// find the informations set
-		
+
 		String infsetname = nextroot.infoset;
 		// find the variable associated with the node
 		InfoSet iset = iSets.get(infsetname);
-		
+
 		String tmpplay = "";
 		int childcount = 0;
 		for(DNode child: nextroot.child.values())
 		{
-			
+
 			String prob = "";
 			if(nextroot.player==0)
 			{
-				 prob = iset.qre_prob.get(child.nodeid); 
+				prob = iset.qre_prob.get(child.nodeid); 
 			}
 			else
 			{
 				prob = iset.qre_var.get(child.nodeid); 
 			}
-			
+
 			String val = playContinuationGame(child, conplay, iSets);
 			childcount++;
-			
+
 			tmpplay += prob +"*("+ val +")";
-			
+
 			if(childcount<nextroot.child.size())
 			{
 				tmpplay += "+";
@@ -243,8 +385,8 @@ public class EquationGenerator {
 	}
 
 	private static InfoSet getInfoSet(String infsetname, ArrayList<InfoSet> iSets) {
-		
-		
+
+
 		for(InfoSet is: iSets)
 		{
 			if(is.id.equals(infsetname))
@@ -252,7 +394,7 @@ public class EquationGenerator {
 				return is;
 			}
 		}
-		
+
 		return null;
 	}
 
@@ -262,9 +404,9 @@ public class EquationGenerator {
 		DNode tempnode = node;
 
 		String prb = "";
-		
-		
-		
+
+
+
 
 		while(tempnode.parent != null)
 		{
@@ -459,7 +601,7 @@ class InfoSet{
 	ArrayList<DNode> nodes = new ArrayList<DNode>();
 	HashMap<Integer, String> qre_prob = new HashMap<Integer, String>();
 	HashMap<Integer, String> qre_var = new HashMap<Integer, String>();
-	
+
 	int player;
 	int depth;
 	String id;
