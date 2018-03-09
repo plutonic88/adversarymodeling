@@ -19,19 +19,50 @@ public class EquationGenerator {
 		HashMap<String, ArrayList<DNode>> I = prepareInformationSets(root, DEPTH_LIMIT, naction);
 		printInfoSet(I);
 
-		ArrayList<InfoSet> ISets = prepareInfoSet(I);
+		HashMap<String, InfoSet> ISets = prepareInfoSet(I);
 
 		printISets(ISets);
+		
+		assignRewardToLeafNodes(ISets, root);
 
-		expUtility(I.get("d1_p1_0"), 0, root, ISets);
+		//varify it
+		expUtility(I.get("d3_p1_3"), 0, root, ISets, "d3_p1_3");
+		
+		
+		printMatLabCode(ISets, root);
 
 
 	}
 
-	private static void printISets(ArrayList<InfoSet> iSets) 
+	private static void assignRewardToLeafNodes(HashMap<String,InfoSet> iSets, DNode root) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private static void printMatLabCode(HashMap<String,InfoSet> iSets, DNode root) {
+		
+		
+		// print initialization
+		
+		
+		for(InfoSet iset: iSets.values())
+		{
+			for(Integer nodeid: iset.qre_var.keySet())
+			{
+				String qre_prob = iset.qre_prob.get(nodeid);
+				String qre_var = iset.qre_var.get(nodeid);
+				
+				System.out.println(qre_prob +" = "+ qre_var);
+			}
+		}
+		
+		
+	}
+
+	private static void printISets(HashMap<String,InfoSet> iSets) 
 	{
 
-		for(InfoSet iset: iSets)
+		for(InfoSet iset: iSets.values())
 		{
 			System.out.println("\nISet : "+ iset.id + ", player "+ iset.player + ", depth "+ iset.depth);
 			System.out.print("nodes : ");
@@ -40,24 +71,29 @@ public class EquationGenerator {
 				System.out.print(node.nodeid+" ");
 			}
 			System.out.println();
-			for(Integer nodeid: iset.prob.keySet())
+			for(Integer nodeid: iset.qre_prob.keySet())
 			{
-				System.out.println(nodeid + ": "+ iset.prob.get(nodeid));
+				System.out.println(nodeid + " prob:  "+ iset.qre_prob.get(nodeid));
+			}
+			
+			for(Integer nodeid: iset.qre_var.keySet())
+			{
+				System.out.println(nodeid + " var :  "+ iset.qre_var.get(nodeid));
 			}
 
 		}
 
 	}
 
-	private static ArrayList<InfoSet> prepareInfoSet(HashMap<String, ArrayList<DNode>> I) {
+	private static HashMap<String, InfoSet> prepareInfoSet(HashMap<String, ArrayList<DNode>> I) {
 
 
-		ArrayList<InfoSet> isets = new ArrayList<InfoSet>();
+		HashMap<String, InfoSet> isets = new HashMap<String, InfoSet>();
 
 		for(String is: I.keySet())
 		{
 			InfoSet infset = makeObj(is, I.get(is));
-			isets.add(infset);
+			isets.put(is ,infset);
 		}
 
 
@@ -87,7 +123,9 @@ public class EquationGenerator {
 			{
 				for(DNode child: node.child.values())
 				{
-					obj.prob.put(child.nodeid, is+"_"+child.prevaction);
+					obj.qre_prob.put(child.nodeid, is+"_"+child.prevaction);
+					obj.qre_var.put(child.nodeid, "x("+InfoSet.varcount+")");
+					InfoSet.varcount++;
 				}
 			}
 		}
@@ -102,7 +140,8 @@ public class EquationGenerator {
 					{
 						if(child.prevaction == action)
 						{
-							obj.prob.put(child.nodeid, "x("+InfoSet.varcount+")");
+							obj.qre_prob.put(child.nodeid, is+"_"+child.prevaction);
+							obj.qre_var.put(child.nodeid, "x("+InfoSet.varcount+")");
 						}
 						
 					}
@@ -116,58 +155,52 @@ public class EquationGenerator {
 		return obj;
 	}
 
-	private static void expUtility(ArrayList<DNode> Infoset, int action, DNode root, ArrayList<InfoSet> iSets)
+	private static void expUtility(ArrayList<DNode> Infoset, int action, DNode root, HashMap<String,InfoSet> iSets, String infosetname)
 	{
 		String exputility = "";
-		
+		String probtoreach = "";
+		String continuationvalue = "";
 		int nodecount = 0;
 		for(DNode node: Infoset)
 		{
 			// for node find the probability to reach the information set
-
-			String probtoreach = getProbToReachInfoNode(node, root, iSets);
-
-			System.out.println("\nNode "+ node.nodeid + ", Infoset "+ node.infoset + ", prob to reach "+ probtoreach);
-
+			probtoreach = getProbToReachInfoNode(node, root, iSets, infosetname);
+			
+			if(probtoreach.equals(""))
+			{
+				probtoreach = "1";
+			}
+			
+			//System.out.println("\nNode "+ node.nodeid + ", Infoset "+ node.infoset + ", prob to reach : "+ probtoreach);
+			
+			
 			// consider prob of playing action 1
-
-
 			// play the continuation game
-			
 			DNode nextroot = node.child.get(action);
-			
-			String continuationvalue = playContinuationGame(nextroot, "", iSets);
-			
+			continuationvalue = playContinuationGame(nextroot, "", iSets);
 			nodecount++;
 			
-			System.out.println(continuationvalue);
+			System.out.println("\nInfoset "+ infosetname);
+			System.out.println("In node "+ node.nodeid);
+			System.out.println("Prob to reach infoset "+probtoreach);
+			System.out.println("Continuation value "+continuationvalue);
+			
 			
 			exputility += probtoreach +"*("+continuationvalue + ")";
-			
 			if(nodecount< Infoset.size())
 			{
 				exputility += "+";
 			}
-			
-			
-			
-			
-			
-			int y=1;
-			
-
-
-
-
-
 		}
 		
-		System.out.println("\n"+exputility);
+		
+		
+		System.out.println("\nEXP : "+exputility+"\n");
 
 
 	}
 
-	private static String playContinuationGame(DNode nextroot, String conplay, ArrayList<InfoSet> iSets) {
+	private static String playContinuationGame(DNode nextroot, String conplay, HashMap<String,InfoSet> iSets) {
 		
 		
 		
@@ -178,10 +211,9 @@ public class EquationGenerator {
 		
 		String infsetname = nextroot.infoset;
 		// find the variable associated with the node
-		InfoSet iset = getInfoSet(infsetname, iSets);
+		InfoSet iset = iSets.get(infsetname);
 		
 		String tmpplay = "";
-		
 		int childcount = 0;
 		for(DNode child: nextroot.child.values())
 		{
@@ -189,11 +221,11 @@ public class EquationGenerator {
 			String prob = "";
 			if(nextroot.player==0)
 			{
-				 prob = iset.prob.get(child.nodeid); 
+				 prob = iset.qre_prob.get(child.nodeid); 
 			}
 			else
 			{
-				prob = iset.prob.get(child.nodeid); 
+				prob = iset.qre_var.get(child.nodeid); 
 			}
 			
 			String val = playContinuationGame(child, conplay, iSets);
@@ -224,29 +256,34 @@ public class EquationGenerator {
 		return null;
 	}
 
-	private static String getProbToReachInfoNode(DNode node, DNode root, ArrayList<InfoSet> iSets) {
+	private static String getProbToReachInfoNode(DNode node, DNode root, HashMap<String,InfoSet> iSets, String infosetname) {
 
 
-		DNode temp = node;
+		DNode tempnode = node;
 
 		String prb = "";
+		
+		
+		
 
-		while(temp.parent != null)
+		while(tempnode.parent != null)
 		{
 
-			if(temp.parent.player==0)
+			String infsetname = tempnode.parent.infoset;
+			InfoSet infset= iSets.get(infsetname);
+			if(tempnode.parent.player==0)
 			{
-				prb = prb + temp.parent.infoset + "_"+ temp.prevaction;
+				prb = prb + tempnode.parent.infoset + "_"+ tempnode.prevaction;
 			}
-			else if(temp.parent.player==1)
+			else if(tempnode.parent.player==1)
 			{
-				prb = prb + "x("+temp.nodeid+")";
+				prb = prb + infset.qre_var.get(tempnode.nodeid);
 			}
-			if(temp.parent.nodeid!=0)
+			if(tempnode.parent.nodeid!=0)
 			{
 				prb += "*";
 			}
-			temp = temp.parent;
+			tempnode = tempnode.parent;
 		}
 
 
@@ -420,7 +457,9 @@ public class EquationGenerator {
 class InfoSet{
 
 	ArrayList<DNode> nodes = new ArrayList<DNode>();
-	HashMap<Integer, String> prob = new HashMap<Integer, String>();
+	HashMap<Integer, String> qre_prob = new HashMap<Integer, String>();
+	HashMap<Integer, String> qre_var = new HashMap<Integer, String>();
+	
 	int player;
 	int depth;
 	String id;
@@ -461,6 +500,7 @@ class DNode {
 		this.nodeid = nodeid;
 		this.depth = depth;
 		this.player = player;
+		this.attacker_reward = nodeid;
 	}
 
 	public DNode(DNode node) {
