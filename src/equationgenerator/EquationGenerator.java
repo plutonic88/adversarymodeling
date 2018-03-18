@@ -6,13 +6,19 @@ import java.util.HashMap;
 public class EquationGenerator {
 
 	public static int treenodecount =0;
+	
+	
+	
 
 
 	public static void main(String[] args) throws Exception 
 	{
-		int DEPTH_LIMIT = 2;
+		int DEPTH_LIMIT = 4;
 		int naction = 2;
-		DNode root = createGameTree(DEPTH_LIMIT, naction);
+		
+		HashMap<Integer, Integer[]> noderewards = createNodeRewards(naction);
+		
+		DNode root = createGameTree(DEPTH_LIMIT, naction, noderewards);
 		System.out.println("Node id "+ root.nodeid + ", parent : "+ null + ", player "+ 0);
 		System.out.println();
 		printTree(root, naction);
@@ -23,19 +29,42 @@ public class EquationGenerator {
 
 		printISets(ISets);
 
-		assignRewardToLeafNodes(ISets, root);
+		//assignRewardToLeafNodes(ISets, root);
 
 		//varify it
-		//expUtility( 1, root, ISets, "d3_p1_3");
+		//expUtility( 1, root, ISets, "d2_p0_1");
 
 
 		// equation for an action in an information set
 		//generateEqnInInformationSet(ISets, "d3_p1_3", 0 , root, "x(3)", "d3_p1_3_0");
 
+		
+		// compute rewards for seqences
+		
+		
+		
 
 		printMatLabCode(ISets, root);
 
 
+	}
+
+	private static HashMap<Integer, Integer[]> createNodeRewards(int naction) {
+		
+		
+		HashMap<Integer, Integer[]> values = new HashMap<Integer, Integer[]>();
+		
+		Integer [] v = {7, 3};
+		values.put(0, v);
+		
+		Integer[] v1 = {5, 1};
+		values.put(1, v1);
+		
+		
+		
+		
+		
+		return values;
 	}
 
 	private static String generateEqnInInformationSet(HashMap<String, InfoSet> iSets, String infosetname, int action, DNode root, String variable, String prob) {
@@ -114,7 +143,11 @@ public class EquationGenerator {
 	}
 
 	private static void assignRewardToLeafNodes(HashMap<String,InfoSet> iSets, DNode root) {
-		// TODO Auto-generated method stub
+		
+		
+		
+		
+				
 
 	}
 
@@ -229,6 +262,10 @@ public class EquationGenerator {
 
 
 		HashMap<String, InfoSet> isets = new HashMap<String, InfoSet>();
+		
+		
+		
+		
 
 		for(String is: I.keySet())
 		{
@@ -305,11 +342,15 @@ public class EquationGenerator {
 		{
 			// for node find the probability to reach the information set
 			probtoreach = getProbToReachInfoNode(node, root, iSets, infosetname);
+			
+			ArrayList<Integer> seqofactions = getSequenceOfActions(node, root, iSets, infosetname);
 
 			if(probtoreach.equals(""))
 			{
 				probtoreach = "1";
 			}
+			
+			seqofactions.add(action);
 
 			//System.out.println("\nNode "+ node.nodeid + ", Infoset "+ node.infoset + ", prob to reach : "+ probtoreach);
 
@@ -317,7 +358,7 @@ public class EquationGenerator {
 			// consider prob of playing action 1
 			// play the continuation game
 			DNode nextroot = node.child.get(action);
-			continuationvalue = playContinuationGame(nextroot, "", iSets);
+			continuationvalue = playContinuationGame(nextroot, "", iSets, seqofactions, "");
 			nodecount++;
 
 			/*System.out.println("\nInfoset "+ infosetname);
@@ -342,12 +383,66 @@ public class EquationGenerator {
 
 	}
 
-	private static String playContinuationGame(DNode nextroot, String conplay, HashMap<String,InfoSet> iSets) {
+	private static ArrayList<Integer> getSequenceOfActions(DNode node, DNode root, HashMap<String, InfoSet> iSets,
+			String infosetname) {
+		
+		
+		DNode tempnode = node;
+
+		String prb = "";
+
+		ArrayList<Integer> seq = new ArrayList<Integer>();
+		
+
+
+		while(tempnode.parent != null)
+		{
+
+			String infsetname = tempnode.parent.infoset;
+			InfoSet infset= iSets.get(infsetname);
+			if(tempnode.parent.player==0)
+			{
+				prb = prb + tempnode.parent.infoset + "_"+ tempnode.prevaction;
+			}
+			else if(tempnode.parent.player==1)
+			{
+				prb = prb + infset.qre_var.get(tempnode.nodeid);
+			}
+			if(tempnode.parent.nodeid!=0)
+			{
+				prb += "*";
+			}
+			
+			seq.add(tempnode.prevaction);
+			tempnode = tempnode.parent;
+			
+		}
+		
+		// reverse it. 
+		
+		
+		ArrayList<Integer> revseq = new ArrayList<Integer>();
+		
+		for(int i =0; i<seq.size(); i++)
+		{
+			revseq.add(seq.get(seq.size()-i-1));
+		}
+
+		
+		
+		
+		return revseq;
+	}
+
+	private static String playContinuationGame(DNode nextroot, String conplay, HashMap<String,InfoSet> iSets, ArrayList<Integer> seqofactions, String godeep) {
 
 
 
 		if(nextroot.leaf)
+		{
+			//compute reward for sequence
 			return nextroot.attacker_reward+"";
+		}
 
 		// find the informations set
 
@@ -370,7 +465,7 @@ public class EquationGenerator {
 				prob = iset.qre_var.get(child.nodeid); 
 			}
 
-			String val = playContinuationGame(child, conplay, iSets);
+			String val = playContinuationGame(child, conplay, iSets, seqofactions, godeep + " "+ child.prevaction);
 			childcount++;
 
 			tmpplay += prob +"*("+ val +")";
@@ -559,21 +654,23 @@ public class EquationGenerator {
 
 	}
 
-	private static DNode createGameTree(int DEPTH_LIMIT, int naction) 
+	private static DNode createGameTree(int DEPTH_LIMIT, int naction, HashMap<Integer,Integer[]> noderewards) 
 	{
 
 		DNode root = new DNode(0, 0, 0);
 		treenodecount++;
-		genTree(0, naction, DEPTH_LIMIT, root);
+		genTree(0, naction, DEPTH_LIMIT, root, noderewards);
 		return root;
 
 	}
 
-	private static void genTree(int depth, int naction, int DEPTH_LIMIT, DNode node) 
+	private static void genTree(int depth, int naction, int DEPTH_LIMIT, DNode node, HashMap<Integer,Integer[]> noderewards) 
 	{
 
 		if(depth==DEPTH_LIMIT)
 		{
+			int reward = computeReward(node, noderewards);
+			node.attacker_reward = reward;
 			node.leaf = true;
 			return;
 		}
@@ -585,11 +682,98 @@ public class EquationGenerator {
 			child.parent = node;
 			child.prevaction = action;
 			node.child.put(action, child);
-			genTree(depth+1, naction, DEPTH_LIMIT, child);
+			genTree(depth+1, naction, DEPTH_LIMIT, child, noderewards);
 
 
 		}
 
+	}
+
+	private static int computeReward(DNode node, HashMap<Integer,Integer[]> noderewards) {
+		
+		DNode tempnode = node;
+
+		
+		ArrayList<Integer> seq = new ArrayList<Integer>();
+		
+
+
+		while(tempnode.parent != null)
+		{
+
+			seq.add(tempnode.prevaction);
+			tempnode = tempnode.parent;
+			
+		}
+		
+		// reverse it. 
+		
+		
+		ArrayList<Integer> revseq = new ArrayList<Integer>();
+		
+		for(int i =0; i<seq.size(); i++)
+		{
+			revseq.add(seq.get(seq.size()-i-1));
+		}
+		
+		int reward = computeAttackerReward(revseq, noderewards);
+		
+		
+
+		
+		
+		return reward;
+	}
+
+	private static int computeAttackerReward(ArrayList<Integer> seq, HashMap<Integer, Integer[]> noderewards) {
+		
+		
+		
+		
+		
+		int[] controllers = new int[noderewards.size()];
+		
+		int attpoints = 0;
+		int defpoints = 0;
+		
+		System.out.print("\nSeq: ");
+		
+		for(int i= 0; i<seq.size(); i++)
+		{
+			System.out.print(seq.get(i) + " ");
+		}
+		
+		System.out.println();
+		for(int i= 0; i<(seq.size()/2); i++)
+		{
+			
+			int defaction = seq.get(2*i);
+			int attaction = seq.get(2*i+1);
+			
+			
+			int attcost = noderewards.get(attaction)[1];
+			// cost for action
+			attpoints -= attcost;
+			//reward for current action
+			if(defaction != attaction)
+			{
+				int attreward = noderewards.get(attaction)[0];
+				attpoints += attreward;
+				controllers[attaction] = 1;
+			}
+			// now reward for other controlled nodes
+			for(int j=0; j<controllers.length; j++)
+			{
+				if((controllers[j] != controllers[attaction]) && (controllers[j]==1))
+				{
+					int attreward = noderewards.get(attaction)[0];
+					attpoints += attreward;
+				}
+			}
+		}
+		System.out.print("att points : "+ attpoints);
+		
+		return attpoints;
 	}
 
 
