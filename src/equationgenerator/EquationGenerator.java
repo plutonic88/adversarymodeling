@@ -15,7 +15,7 @@ public class EquationGenerator {
 
 	public static void main(String[] args) throws Exception 
 	{
-		int DEPTH_LIMIT = 4;
+		int DEPTH_LIMIT = 2;
 		int naction = 2;
 
 		HashMap<Integer, Integer[]> noderewards = createNodeRewards(naction);
@@ -621,12 +621,13 @@ public class EquationGenerator {
 		String probtoreach = "";
 		String continuationvalue = "";
 		int nodecount = 0;
+		int player = iSets.get(infosetname).player;
 		for(DNode node: iSets.get(infosetname).nodes)
 		{
 			// for node find the probability to reach the information set
 			probtoreach = getProbToReachInfoNodeQRE(node, root, iSets, infosetname);
 
-			ArrayList<Integer> seqofactions = getSequenceOfActions(node, root, iSets, infosetname);
+			ArrayList<Integer> seqofactions = getSequenceOfActionsQRE(node, root, iSets, infosetname);
 
 			if(probtoreach.equals(""))
 			{
@@ -641,7 +642,7 @@ public class EquationGenerator {
 			// consider prob of playing action 1
 			// play the continuation game
 			DNode nextroot = node.child.get(action);
-			continuationvalue = playContinuationGameQRE(nextroot, "", iSets, seqofactions, "");
+			continuationvalue = playContinuationGameQRE(nextroot, "", iSets, seqofactions, "", player);
 			nodecount++;
 
 			/*System.out.println("\nInfoset "+ infosetname);
@@ -716,6 +717,58 @@ public class EquationGenerator {
 
 		return revseq;
 	}
+	
+	private static ArrayList<Integer> getSequenceOfActionsQRE(DNode node, DNode root, HashMap<String, InfoSet> iSets,
+			String infosetname) {
+
+
+		DNode tempnode = node;
+
+		String prb = "";
+
+		ArrayList<Integer> seq = new ArrayList<Integer>();
+
+
+
+		while(tempnode.parent != null)
+		{
+
+			String infsetname = tempnode.parent.infoset;
+			InfoSet infset= iSets.get(infsetname);
+			if(tempnode.parent.player==0)
+			{
+				prb = prb + infset.qre_var.get(tempnode.nodeid);
+			}
+			else if(tempnode.parent.player==1)
+			{
+				prb = prb + infset.qre_var.get(tempnode.nodeid);
+			}
+			if(tempnode.parent.nodeid!=0)
+			{
+				prb += "*";
+			}
+
+			seq.add(tempnode.prevaction);
+			tempnode = tempnode.parent;
+
+		}
+
+		// reverse it. 
+
+
+		ArrayList<Integer> revseq = new ArrayList<Integer>();
+
+		for(int i =0; i<seq.size(); i++)
+		{
+			revseq.add(seq.get(seq.size()-i-1));
+		}
+
+
+
+
+		return revseq;
+	}
+
 
 	private static String playContinuationGame(DNode nextroot, String conplay, HashMap<String,InfoSet> iSets, ArrayList<Integer> seqofactions, String godeep) {
 
@@ -763,14 +816,20 @@ public class EquationGenerator {
 	}
 
 
-	private static String playContinuationGameQRE(DNode nextroot, String conplay, HashMap<String,InfoSet> iSets, ArrayList<Integer> seqofactions, String godeep) {
+	private static String playContinuationGameQRE(DNode nextroot, String conplay, HashMap<String,InfoSet> iSets, ArrayList<Integer> seqofactions, String godeep, int player) {
 
 
 
 		if(nextroot.leaf)
 		{
 			//compute reward for sequence
+			if(player==0)
+			{
+				return nextroot.defender_reward+"";
+			}
 			return nextroot.attacker_reward+"";
+			
+			
 		}
 
 		// find the informations set
@@ -794,7 +853,7 @@ public class EquationGenerator {
 				prob = iset.qre_var.get(child.nodeid); 
 			}
 
-			String val = playContinuationGame(child, conplay, iSets, seqofactions, godeep + " "+ child.prevaction);
+			String val = playContinuationGameQRE(child, conplay, iSets, seqofactions, godeep + " "+ child.prevaction, player);
 			childcount++;
 
 			tmpplay += prob +"*("+ val +")";
@@ -1033,8 +1092,11 @@ public class EquationGenerator {
 
 		if(depth==DEPTH_LIMIT)
 		{
-			int reward = computeReward(node, noderewards);
+			int reward = computeAttackerReward(node, noderewards);
+			//System.out.println();
+			int defreward = computeDefenderReward(node, noderewards);
 			node.attacker_reward = reward;
+			node.defender_reward = defreward;
 			node.leaf = true;
 			return;
 		}
@@ -1053,7 +1115,7 @@ public class EquationGenerator {
 
 	}
 
-	private static int computeReward(DNode node, HashMap<Integer,Integer[]> noderewards) {
+	private static int computeAttackerReward(DNode node, HashMap<Integer,Integer[]> noderewards) {
 
 		DNode tempnode = node;
 
@@ -1081,11 +1143,37 @@ public class EquationGenerator {
 		}
 
 		int reward = computeAttackerReward(revseq, noderewards);
+		return reward;
+	}
+	
+	private static int computeDefenderReward(DNode node, HashMap<Integer,Integer[]> noderewards) {
+
+		DNode tempnode = node;
+
+
+		ArrayList<Integer> seq = new ArrayList<Integer>();
 
 
 
+		while(tempnode.parent != null)
+		{
+
+			seq.add(tempnode.prevaction);
+			tempnode = tempnode.parent;
+
+		}
+
+		// reverse it. 
 
 
+		ArrayList<Integer> revseq = new ArrayList<Integer>();
+
+		for(int i =0; i<seq.size(); i++)
+		{
+			revseq.add(seq.get(seq.size()-i-1));
+		}
+
+		int reward = computeDefenderReward(revseq, noderewards);
 		return reward;
 	}
 
@@ -1137,9 +1225,63 @@ public class EquationGenerator {
 				}
 			}
 		}
-		System.out.print( defpoints+", ");
+		System.out.print( attpoints+", ");
 
 		return attpoints;
+	}
+	
+	
+	private static int computeDefenderReward(ArrayList<Integer> seq, HashMap<Integer, Integer[]> noderewards) {
+
+
+
+
+
+		int[] controllers = new int[noderewards.size()];
+
+		int attpoints = 0;
+		int defpoints = 0;
+
+		/*//System.out.print("");
+
+		for(int i= 0; i<seq.size(); i++)
+		{
+			System.out.print(seq.get(i) + ", ");
+		}
+*/
+		//System.out.println();
+		for(int i= 0; i<(seq.size()/2); i++)
+		{
+
+			int defaction = seq.get(2*i);
+			int attaction = seq.get(2*i+1);
+
+
+			int attcost = noderewards.get(attaction)[1];
+			int defcost = noderewards.get(defaction)[1];
+			// cost for action
+			attpoints -= attcost;
+			defpoints -= defcost;
+			//reward for current action
+			if(defaction != attaction)
+			{
+				int attreward = noderewards.get(attaction)[0];
+				attpoints += attreward;
+				controllers[attaction] = 1;
+			}
+			// now reward for other controlled nodes
+			for(int j=0; j<controllers.length; j++)
+			{
+				if((controllers[j] != controllers[attaction]) && (controllers[j]==1))
+				{
+					int attreward = noderewards.get(attaction)[0];
+					attpoints += attreward;
+				}
+			}
+		}
+		System.out.print( defpoints+", ");
+
+		return defpoints;
 	}
 
 
