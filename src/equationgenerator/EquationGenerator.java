@@ -15,7 +15,7 @@ public class EquationGenerator {
 
 	public static void main(String[] args) throws Exception 
 	{
-		int DEPTH_LIMIT = 2;
+		int DEPTH_LIMIT = 4;
 		int naction = 2;
 
 		HashMap<Integer, Integer[]> noderewards = createNodeRewards(naction);
@@ -48,14 +48,14 @@ public class EquationGenerator {
 
 
 
-		printMatLabCodeQRE(ISets, root);
+		printMatLabCodeQRE(ISets, root, naction);
 
 		//printMatLabCode(ISets, root);
 
 
 	}
 
-	private static void printMatLabCodeQRE(HashMap<String, InfoSet> iSets, DNode root) {
+	private static void printMatLabCodeQRE(HashMap<String, InfoSet> iSets, DNode root, int naction) {
 
 		for(InfoSet iset: iSets.values())
 		{
@@ -130,8 +130,38 @@ public class EquationGenerator {
 		}
 
 
-		
+
 		System.out.println();
+		String err ="";
+		HashMap<String, String> seterror = new HashMap<String, String>();
+		for(InfoSet iset: iSets.values())
+		{
+			err = "err_"+iset.id+" = ";
+			int index = 0;
+			ArrayList<String> done = new ArrayList<String>();
+			for(String qre_var: iset.qre_var.values())
+			{
+				if(!done.contains(qre_var))
+				{
+					if(index==0)
+					{
+						err +=  qre_var;
+					}
+					else
+					{
+						err += " + " + qre_var;
+					}
+					done.add(qre_var);
+				}
+				index++;
+			}
+			System.out.println(err +" - 1 ;");
+			seterror.put(iset.id, err +" - 1 ;");
+		}
+		System.out.println();
+
+
+
 
 		for(InfoSet iset: iSets.values())
 		{
@@ -139,31 +169,38 @@ public class EquationGenerator {
 			ArrayList<String> doneprobs = new ArrayList<String>();
 			for(Integer nodeid: iset.qre_var.keySet())
 			{
-
-
 				String qre_prob = iset.qre_prob.get(nodeid);
 				String qre_var = iset.qre_var.get(nodeid);
 
 				if(!doneprobs.contains(qre_prob))
 				{
-					System.out.println("belie_error_"+qre_prob +" = "+ qre_prob +" - response_"+qre_prob +";");
+					System.out.println("belief_error_"+qre_prob +" = "+ qre_prob +" - response_"+qre_prob +";");
 					doneprobs.add(qre_prob);
 				}
-
-
-
 			}
 		}
-		
-		
-		
+
+
+
 		System.out.println();
-		
+
 		System.out.print("belief_error_vector = [ ");
+
+
 		for(InfoSet iset: iSets.values())
 		{
-			
-			
+			System.out.print("err_"+iset.id + "; ");
+		}
+
+
+
+		for(InfoSet iset: iSets.values())
+		{
+
+			// print all linear errors
+
+
+
 
 			ArrayList<String> doneprobs = new ArrayList<String>();
 			for(Integer nodeid: iset.qre_var.keySet())
@@ -171,16 +208,16 @@ public class EquationGenerator {
 
 
 				String qre_prob = iset.qre_prob.get(nodeid);
-				
+
 
 				if(!doneprobs.contains(qre_prob))
 				{
-					System.out.print("belie_error_"+qre_prob);
-					
-					
-					
+					System.out.print("belief_error_"+qre_prob);
+
+
+
 					System.out.print("; ");
-					
+
 					doneprobs.add(qre_prob);
 				}
 
@@ -188,10 +225,93 @@ public class EquationGenerator {
 
 			}
 		}
+
+		System.out.println("]; "+"\n");
+
+
+
+
+
+		// create linear constraint using Aeq b
+
+
+		int infcount = 0;
+
+		for(InfoSet iset: iSets.values())
+		{
+
+			System.out.print("A"+infcount+" = [ ");
+			
+			int innercount = 0;
+			
+			for(InfoSet iset1: iSets.values())
+			{
+
+
+				if(iset.id.equals(iset1.id))
+				{
+					for(int i=0; i<naction; i++)
+					{
+						System.out.print("1 ");
+						if(innercount<(iSets.size()*naction-1))
+						{
+							System.out.print(",");
+						}
+						innercount++;
+					}
+				}
+				else
+				{
+					for(int i=0; i<naction; i++)
+					{
+						System.out.print("0 ");
+						if(innercount<((iSets.size()*naction)-1))
+						{
+							System.out.print(",");
+						}
+						innercount++;
+					}
+				}
+				
+				
+				
+				
+			}
+			System.out.println(" ]; ");
+			infcount++;
+
+		}
 		
+		
+		int count = 0;
+		
+		System.out.print("Aeq = [ ");
+		for(InfoSet iset: iSets.values())
+		{
+			System.out.print("A"+count);
+			count++;
+			if(count<iSets.size())
+			{
+				System.out.print(";");
+			}
+		}
+		System.out.println("]; "+"\n");
+		
+		
+		
+		count = 0;
+		
+		System.out.print("beq = [ ");
+		for(InfoSet iset: iSets.values())
+		{
+			System.out.print("1");
+			count++;
+			if(count<iSets.size())
+			{
+				System.out.print("; ");
+			}
+		}
 		System.out.print("]; ");
-
-
 
 
 
@@ -717,7 +837,7 @@ public class EquationGenerator {
 
 		return revseq;
 	}
-	
+
 	private static ArrayList<Integer> getSequenceOfActionsQRE(DNode node, DNode root, HashMap<String, InfoSet> iSets,
 			String infosetname) {
 
@@ -828,8 +948,8 @@ public class EquationGenerator {
 				return nextroot.defender_reward+"";
 			}
 			return nextroot.attacker_reward+"";
-			
-			
+
+
 		}
 
 		// find the informations set
@@ -1092,9 +1212,10 @@ public class EquationGenerator {
 
 		if(depth==DEPTH_LIMIT)
 		{
+			int defreward = computeDefenderReward(node, noderewards);
 			int reward = computeAttackerReward(node, noderewards);
 			//System.out.println();
-			int defreward = computeDefenderReward(node, noderewards);
+
 			node.attacker_reward = reward;
 			node.defender_reward = defreward;
 			node.leaf = true;
@@ -1145,7 +1266,7 @@ public class EquationGenerator {
 		int reward = computeAttackerReward(revseq, noderewards);
 		return reward;
 	}
-	
+
 	private static int computeDefenderReward(DNode node, HashMap<Integer,Integer[]> noderewards) {
 
 		DNode tempnode = node;
@@ -1194,7 +1315,7 @@ public class EquationGenerator {
 		{
 			System.out.print(seq.get(i) + ", ");
 		}
-*/
+		 */
 		//System.out.println();
 		for(int i= 0; i<(seq.size()/2); i++)
 		{
@@ -1229,8 +1350,8 @@ public class EquationGenerator {
 
 		return attpoints;
 	}
-	
-	
+
+
 	private static int computeDefenderReward(ArrayList<Integer> seq, HashMap<Integer, Integer[]> noderewards) {
 
 
@@ -1248,7 +1369,7 @@ public class EquationGenerator {
 		{
 			System.out.print(seq.get(i) + ", ");
 		}
-*/
+		 */
 		//System.out.println();
 		for(int i= 0; i<(seq.size()/2); i++)
 		{
