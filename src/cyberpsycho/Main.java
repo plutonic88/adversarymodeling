@@ -22,7 +22,13 @@ public class Main {
 		
 		//AdversaryModelExps.getLambdaOneStageFlipIt();
 		
-		AdversaryModelExps.computeLambdaExps();
+		//AdversaryModelExps.computeLambdaExps();
+		
+		
+		AdversaryModelExps.computeLambda();
+		
+		
+		
 		
 		
 	}

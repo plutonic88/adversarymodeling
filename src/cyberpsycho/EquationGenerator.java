@@ -1,4 +1,4 @@
-package equationgenerator;
+package cyberpsycho;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,13 +48,21 @@ public class EquationGenerator {
 		HashMap<String, Double> probs = strategy.get(key);
 
 
-		printMatLabCodeQRETest(ISets, root, naction);
+		//printMatLabCodeQRETest(ISets, root, naction);
 
-		
 
-		//printMatLabCodeQRE(ISets, root, naction);
+
+		printMatLabCodeQRE(ISets, root, naction);
 
 		//printMatLabCodeMLE(ISets, root);
+		
+		
+		//TODO write code for loglikelihood, so that we can plug anything
+		/**
+		 * 1. create sequence and corresponding frequency
+		 * 2. Use searching method for finding lambda with max ll
+		 * 3. Inside ll computation function use frequency and the solution from a method
+		 */
 
 
 	}
@@ -95,6 +103,8 @@ public class EquationGenerator {
 
 			}
 		}
+		
+		
 
 
 
@@ -147,7 +157,7 @@ public class EquationGenerator {
 			}
 		}
 
-
+		/*
 
 		System.out.println();
 		String err ="";
@@ -200,7 +210,7 @@ public class EquationGenerator {
 			}
 		}
 
-
+*/
 
 		System.out.println();
 
@@ -251,7 +261,7 @@ public class EquationGenerator {
 		System.out.println("]; "+"\n");
 
 
-
+/*
 
 
 		// create linear constraint using Aeq b
@@ -423,8 +433,8 @@ public class EquationGenerator {
 		}
 
 		System.out.print("];\n\n ");
-		
-		
+*/
+
 		System.out.print("x0 = [ ");
 
 		for(String isetname: keyset)
@@ -441,7 +451,7 @@ public class EquationGenerator {
 
 				if(!doneprobs.contains(qre_prob))
 				{
-					System.out.print("0.5;");
+					System.out.print("0.166;");
 					doneprobs.add(qre_prob);
 				}
 
@@ -453,6 +463,133 @@ public class EquationGenerator {
 		System.out.print("];\n\n ");
 
 
+		HashMap<String, String> container = new HashMap<String, String>();
+
+
+
+		for(String isetname: keyset)
+		{
+
+
+			InfoSet iset = iSets.get(isetname);
+
+			if(iset.player==1 && iset.depth>0)
+			{
+
+				/*
+			ArrayList<String> doneprobs = new ArrayList<String>();
+				 */
+				// find the history of any node
+
+				DNode node = iset.nodes.get(0);
+				DNode child = null;
+				for(DNode ch: node.child.values())
+				{
+					child= ch;
+					break;
+				}
+
+				String histp1 = "";
+				String histp0 = "";
+
+				DNode tmp = node.parent;
+				
+				int pl = 1;
+
+				while(tmp != null && tmp.nodeid != 0)
+				{
+					
+					if(pl==0)
+					{
+						histp0 += (tmp.prevaction+1);
+					}
+					else
+					{
+						histp1 += (tmp.prevaction+1);
+					}
+					tmp = tmp.parent;
+					pl = pl^1;
+				}
+
+				System.out.println(isetname + " hist : "+ histp0 + " "+ histp1 );
+				
+				
+				String key = histp0 +"0"+histp1;
+				String value = iset.qre_var.get(child.nodeid);
+				container.put(key, value);
+
+				int z=1;
+			}
+			
+			
+
+
+			/*for(Integer nodeid: iset.qre_var.keySet())
+			{
+
+
+				String qre_prob = iset.qre_prob.get(nodeid);
+				String qre_var = iset.qre_var.get(nodeid);
+
+				if(!doneprobs.contains(qre_prob))
+				{
+					System.out.print("0.5;");
+					doneprobs.add(qre_prob);
+				}
+
+
+
+			}*/
+		}
+		
+		String keyst = "{";
+		String valuest = "{";
+		
+		
+		
+		String[] contkey = new String[container.keySet().size()];
+		int ind = 0;
+		
+		for(String key: container.keySet())
+		{
+			contkey[ind++] = key;
+		}
+		
+		Arrays.sort(contkey);
+		
+		
+		int index = 0;
+		
+		
+		
+		for(String key: contkey)
+		{
+			String value = container.get(key);
+			
+			String tmpval = value.substring(2, value.length()-1);
+			
+			
+			valuest += "\'"+tmpval +"\'";;
+			keyst += "\'"+key +"\'";
+			if(index<container.keySet().size()-1)
+			{
+				keyst += ", ";
+				valuest += ", ";
+			}
+			
+			index ++;
+		}
+		keyst += "}";
+		valuest += "}";
+		
+		
+		
+		
+		
+		
+		System.out.println("M = containers.Map(" + keyst +","+ valuest + ");" );
+
+
 
 
 
@@ -462,9 +599,9 @@ public class EquationGenerator {
 
 
 	}
-	
-	
-	
+
+
+
 	private static void printMatLabCodeQRETest(HashMap<String, InfoSet> iSets, DNode root, int naction) {
 
 
@@ -520,7 +657,7 @@ public class EquationGenerator {
 
 				String qre_prob = iset.qre_prob.get(nodeid);
 				String qre_var = iset.qre_var.get(nodeid);
-				
+
 				double qre_var_val = iset.qre_var_val.get(nodeid);
 
 
@@ -542,7 +679,7 @@ public class EquationGenerator {
 						double eqn = generateEqnInInformationSetQRE_V(iSets, iset.id, action , root, qre_var_val, qre_prob);
 						System.out.println(iset.id+", action "+action+", "+ eqn +";");
 						int c=1;
-						
+
 					}
 					else if(iset.player==1)
 					{
@@ -588,7 +725,7 @@ public class EquationGenerator {
 			seterror.put(iset.id, err +" - 1 ;");
 		}
 		System.out.println();
-*/
+		 */
 
 
 
@@ -659,7 +796,7 @@ public class EquationGenerator {
 		}
 
 		System.out.println("]; "+"\n");
-*/
+		 */
 
 
 
@@ -715,7 +852,7 @@ public class EquationGenerator {
 			infcount++;
 
 		}
-*/
+		 */
 
 		/*int count = 0;
 
@@ -749,7 +886,7 @@ public class EquationGenerator {
 		}
 		System.out.println("]; ");
 
-*/
+		 */
 
 
 
@@ -833,8 +970,8 @@ public class EquationGenerator {
 		}
 
 		System.out.print("];\n\n ");
-		
-		
+
+
 		System.out.print("x0 = [ ");
 
 		for(String isetname: keyset)
@@ -861,7 +998,7 @@ public class EquationGenerator {
 		}
 
 		System.out.print("];\n\n ");
-*/
+		 */
 
 
 
@@ -1054,9 +1191,9 @@ public class EquationGenerator {
 
 
 	}
-	
-	
-	
+
+
+
 	private static double generateEqnInInformationSetQRE_V(HashMap<String, InfoSet> iSets, String infosetname, int action, DNode root, double variable, String prob) {
 
 
@@ -1064,8 +1201,8 @@ public class EquationGenerator {
 		// get the variable for that action
 		// get the probability for the action
 		// u(action') - u(actoin)
-		
-		
+
+
 		int lambda = 2;
 
 
@@ -1089,21 +1226,21 @@ public class EquationGenerator {
 
 
 		double eqn = 0.0;
-		
-		
+
+
 		for(int i =0; i<naction ; i++)
 		{
 
 
 			double expterm = 1;
-			
+
 
 			if(i!=action)
 			{
 				//expterm = "exp(lambda*("+ "("+exputilities.get(i) +") - " +  "(" + exputilities.get(action) + ")" + "))"; 
-				
+
 				expterm = Math.exp(lambda* (exputilities.get(i) - exputilities.get(action)));
-				
+
 			}
 			else
 			{
@@ -1313,12 +1450,12 @@ public class EquationGenerator {
 				{
 					obj.qre_prob.put(child.nodeid, is+"_"+child.prevaction);
 					obj.qre_var.put(child.nodeid, "x("+InfoSet.varcount+")");
-					
+
 					obj.qre_prob_val.put(child.nodeid, 0.5);
 					obj.qre_var_val.put(child.nodeid, 0.5);
-					
-					
-					
+
+
+
 					InfoSet.varcount++;
 				}
 			}
@@ -1336,7 +1473,7 @@ public class EquationGenerator {
 						{
 							obj.qre_prob.put(child.nodeid, is+"_"+child.prevaction);
 							obj.qre_var.put(child.nodeid, "x("+InfoSet.varcount+")");
-							
+
 							obj.qre_prob_val.put(child.nodeid, 0.5);
 							obj.qre_var_val.put(child.nodeid, 0.5);
 						}
@@ -1455,8 +1592,8 @@ public class EquationGenerator {
 
 
 	}
-	
-	
+
+
 	private static double expUtilityQRE_V(int action, DNode root, HashMap<String,InfoSet> iSets, String infosetname)
 	{
 		double exputility = 0.0;
@@ -1708,9 +1845,9 @@ public class EquationGenerator {
 		conplay = tmpplay;
 		return conplay;
 	}
-	
-	
-	
+
+
+
 	private static double playContinuationGameQRE_V(DNode nextroot, String conplay, HashMap<String,InfoSet> iSets, ArrayList<Integer> seqofactions, String godeep, int player) {
 
 
@@ -1817,8 +1954,8 @@ public class EquationGenerator {
 		DNode tempnode = node;
 
 		String prb = "";
-		
-		
+
+
 
 
 
@@ -1846,15 +1983,15 @@ public class EquationGenerator {
 
 		return prb;
 	}
-	
+
 	private static double getProbToReachInfoNodeQRE_V(DNode node, DNode root, HashMap<String,InfoSet> iSets, String infosetname) {
 
 
 		DNode tempnode = node;
 
 		double prb = 1;
-		
-		
+
+
 
 
 
@@ -1882,7 +2019,7 @@ public class EquationGenerator {
 
 		return prb;
 	}
-	
+
 
 	private static void printInfoSet(HashMap<String, ArrayList<DNode>> I) 
 	{
@@ -2219,6 +2356,122 @@ public class EquationGenerator {
 		return defpoints;
 	}
 
+	public static HashMap<String, InfoSet> buildGameTree(int DEPTH_LIMIT, int naction) {
+		
+		
+		
+
+		HashMap<Integer, Integer[]> noderewards = createNodeRewards(naction);
+
+		DNode root = createGameTree(DEPTH_LIMIT, naction, noderewards);
+		System.out.println("Node id "+ root.nodeid + ", parent : "+ null + ", player "+ 0);
+		System.out.println();
+		printTree(root, naction);
+		HashMap<String, ArrayList<DNode>> I = prepareInformationSets(root, DEPTH_LIMIT, naction);
+		printInfoSet(I);
+
+		HashMap<String, InfoSet> ISets = prepareInfoSet(I);
+
+		printISets(ISets);
+		
+		return ISets;
+		
+	}
+
+	public static void computeAttackerBestResponse(HashMap<String, InfoSet> isets, HashMap<String, int[]> attackfrequency, int naction, HashMap<String,HashMap<String,Double>> defstrategy) 
+	{
+		
+		
+		String[] keyset = new String[isets.size()];
+		int indx=0;
+
+		for(String is: isets.keySet())
+		{
+			keyset[indx++] = is;
+		}
+		Arrays.sort(keyset);
+		
+		
+		
+		HashMap<String, String> container = new HashMap<String, String>();
+		for(String isetname: keyset)
+		{
+
+
+			InfoSet iset = isets.get(isetname);
+			
+			if(iset.player==1 && iset.depth>0)
+			{
+
+				/*
+			ArrayList<String> doneprobs = new ArrayList<String>();
+				 */
+				// find the history of any node
+
+				DNode node = iset.nodes.get(0);
+				DNode child = null;
+				for(DNode ch: node.child.values())
+				{
+					child= ch;
+					break;
+				}
+
+				String histp1 = "";
+				String histp0 = "";
+
+				DNode tmp = node.parent;
+				
+				int pl = 1;
+
+				while(tmp != null && tmp.nodeid != 0)
+				{
+					
+					if(pl==0)
+					{
+						histp0 += (tmp.prevaction+1);
+					}
+					else
+					{
+						histp1 += (tmp.prevaction+1);
+					}
+					tmp = tmp.parent;
+					pl = pl^1;
+				}
+
+				System.out.println(isetname + " hist : "+ histp0 + " "+ histp1 );
+				
+				
+				String key = histp0 +"0"+histp1;
+				String value = iset.qre_var.get(child.nodeid);
+				container.put(key, value);
+
+				int z=1;
+			}
+			
+			
+
+
+			/*for(Integer nodeid: iset.qre_var.keySet())
+			{
+
+
+				String qre_prob = iset.qre_prob.get(nodeid);
+				String qre_var = iset.qre_var.get(nodeid);
+
+				if(!doneprobs.contains(qre_prob))
+				{
+					System.out.print("0.5;");
+					doneprobs.add(qre_prob);
+				}
+
+
+
+			}*/
+		}
+		
+		
+	}
+
 
 }
 
@@ -2226,16 +2479,16 @@ public class EquationGenerator {
 class InfoSet{
 
 	ArrayList<DNode> nodes = new ArrayList<DNode>();
-	
-	
+
+
 	HashMap<Integer, String> qre_prob = new HashMap<Integer, String>();
 	HashMap<Integer, String> qre_var = new HashMap<Integer, String>();
-	
+
 	HashMap<Integer, Double> qre_prob_val = new HashMap<Integer, Double>();
 	HashMap<Integer, Double> qre_var_val = new HashMap<Integer, Double>();
-	
-	
-	
+
+
+
 
 	int player;
 	int depth;

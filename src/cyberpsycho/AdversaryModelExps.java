@@ -11,6 +11,10 @@ import java.util.Random;
 import cs.Interval.contraction.SecurityGameContraction;
 import cs.Interval.contraction.TargetNode;
 import cyberpsycho.Data.Headers_minimum;
+
+
+
+
 import games.EmpiricalMatrixGame;
 import games.MatrixGame;
 import games.MixedStrategy;
@@ -18,7 +22,6 @@ import games.OutcomeDistribution;
 import games.OutcomeIterator;
 import groupingtargets.ClusterTargets;
 import kmeans.KmeanClustering;
-import kmeans.Weka;
 import matlabcontrol.MatlabConnectionException;
 import matlabcontrol.MatlabInvocationException;
 import matlabcontrol.MatlabProxy;
@@ -322,12 +325,16 @@ public class AdversaryModelExps {
 			{
 				attackaction = Integer.parseInt(action);
 			}*/
-			if(def_order.equals("0") && (gameinstance>=4) && users_refined.contains(tmpuser) && gameplayed == 6 && gametype == game_type) // asc, take 4th game instance to 6th
+
+			/**
+			 * we can use data from different game instances gameinstance== 4,5,6 or 1,2,3
+			 */
+			if(def_order.equals("0") && (gameinstance==4) && users_refined.contains(tmpuser) && gameplayed == 6 && gametype == game_type) // asc, take 4th game instance to 6th
 			{
 
 				examples.add(example);
 			}
-			else if(def_order.equals("1") && (gameinstance<=3) && users_refined.contains(tmpuser) && gameplayed == 6 && gametype == game_type) // desc, take 1st game instance to 3rd
+			else if(def_order.equals("1") && (gameinstance==3) && users_refined.contains(tmpuser) && gameplayed == 6 && gametype == game_type) // desc, take 1st game instance to 3rd
 			{
 				examples.add(example);
 			}
@@ -2048,9 +2055,9 @@ public class AdversaryModelExps {
 		int exampleindex = 0;
 		for(String user_id: users_refined)
 		{
-			
+
 			int count[] = new int[numberofnodes];
-			
+
 			for(ArrayList<String> tmpexample: data_refined)
 			{
 				String tmpuserid = tmpexample.get(Headers_minimum.user_id.getValue());
@@ -2083,7 +2090,7 @@ public class AdversaryModelExps {
 
 				} // end if
 			} // end for loop
-			
+
 			int findex =0;
 			for(int c: count)
 			{
@@ -2417,5 +2424,435 @@ public class AdversaryModelExps {
 		}
 		return examples;
 	}
+
+
+
+	/**
+	 * 1. groups users
+	 * 2. estimate lambda based on different groups
+	 * 
+	 */
+	public static void computeLambda() {
+
+
+		int k= 3; // how many clusters you want
+		int numberofnodes = 6;
+
+		ArrayList<ArrayList<String>> data =  Data.readData();
+
+		ArrayList<String> users_refined = refineUser(data, -1, 1);
+
+		ArrayList<ArrayList<String>>  data_refined = refineData(data,1, users_refined);
+
+		//double[][] examples = prepareExamplesDTScorePoints(data_refined, users_refined);
+		double[][] examples = prepareExamplesNodeCostPoint(data_refined, users_refined);
+		//double [][] examples = prepareFrquencey(data_refined, users_refined, numberofnodes);
+
+		printData(users_refined,examples);
+
+		// normalize the data
+
+		double normalizedexamples[][] = normalizeData(examples);
+
+		System.out.println("Normalized data: ");
+
+		printData(users_refined, normalizedexamples);
+
+
+
+
+
+		//List<Integer>[] clusters = Weka.clusterUsers(k,normalizedexamples);
+
+
+
+		List<Integer>[] clusters = KmeanClustering.clusterUsersV2(k, normalizedexamples);
+
+
+		printClustersInt(clusters);
+
+
+		/**
+		 * next use weka to cluster
+		 */
+
+		//printClusters(clusters);
+
+		//Create a proxy, which we will use to control MATLAB
+		/*MatlabProxyFactory factory = new MatlabProxyFactory();
+		MatlabProxy proxy = factory.getProxy();
+		 */
+
+		try
+		{
+			PrintWriter pw = new PrintWriter(new FileOutputStream(new File("cluster-lambda.csv"),true));
+
+			pw.append("cluster,#users,lambda,score,mscore,nscore,pscore,nodeA(10/8),nodeB(10/2),NodeC(4/2),nodeD(4/8),NodeE(10/5),nodeF(PASS)"+ "\n");
+
+			//pw.append(cluster+","+users_groups.size()+","+ estimatedlambda+","+sumscore+","+sum_mscore+","+sum_nscore+","+sum_pscore+"\n");
+			pw.close();
+		}
+		catch(Exception ex)
+		{
+			System.out.println(" ");
+		}
+
+		for(int cluster=0; cluster<k; cluster++)
+		{
+			ArrayList<String> users_groups = getUserGroup(clusters[cluster], users_refined);
+
+
+
+			/**
+			 * get attack count for different information set
+			 */
+
+
+
+			int[][] gameplay = createGamePlay(users_groups, data_refined, 5);
+			int attackcount[] = getAttackFrequency(users_groups, data_refined, numberofnodes);
+			HashMap<String, int[]> attackfrequency = getAttackCountInData(gameplay, numberofnodes, 5);
+			
+			
+			//printAttackFreq(attackfrequency);
+			
+			
+			
+			// now compute the best response in the tree
+			
+			int DEPTH_LIMIT = 4;
+			int naction = 6;
+			
+			HashMap<String, InfoSet> Isets = EquationGenerator.buildGameTree(DEPTH_LIMIT, naction);
+			
+			HashMap<String, HashMap<String, Double>> strategy = Data.readStrategy("g5d5_FI.txt");
+			
+			EquationGenerator.computeAttackerBestResponse(Isets, attackfrequency, naction, strategy);
+
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+
+			int sumattackcoutn = 0;
+
+			for(int c: attackcount)
+			{
+				sumattackcoutn += c;
+			}
+
+
+			HashMap<String, Integer> att_game_play = buildOneStageGamePlay(users_groups, data_refined, 1);
+			//HashMap<String, int[][]> def_game_play = buildGamePlay(users_refined, data_refined, 0);
+			//HashMap<String, int[][]> reward = buildGameRewards(users_refined, data_refined);
+
+			//printOneStageGamePlay(att_game_play);
+
+			
+			String key = "EMPTY EMPTY"; 
+			HashMap<String, Double> probs = strategy.get(key);
+
+
+
+
+
+			//int x=0;
+
+			double estimatedlambda = 0;//EquationGenerator.estimateLambda(strategy, numberofnodes);
+
+			//Disconnect the proxy from MATLAB
+			//proxy.disconnect();
+
+
+
+			double sumscore = 0;
+
+			double sum_mscore =0;
+			double sum_nscore = 0;
+			double sum_pscore = 0;
+
+
+			for(int i=0; i<users_groups.size(); i++)
+			{
+
+
+				String tmpusr = users_groups.get(i);
+
+				sumscore += getUserScore(tmpusr, data_refined);
+
+				sum_mscore += getPersonalityScore(tmpusr, data_refined, 0);
+				sum_nscore += getPersonalityScore(tmpusr, data_refined, 1);
+				sum_pscore += getPersonalityScore(tmpusr, data_refined, 2);
+
+
+				//System.out.println("kept user "+ tmpusr);
+			}
+
+			sumscore /= users_groups.size();
+			sum_mscore /= users_groups.size();
+			sum_nscore /= users_groups.size();
+			sum_pscore /= users_groups.size();
+
+
+
+			System.out.println("Cluster "+cluster+", user count "+users_groups.size()+", lambda "+ estimatedlambda);
+
+
+			try
+			{
+				PrintWriter pw = new PrintWriter(new FileOutputStream(new File("cluster-lambda.csv"),true));
+
+				//pw.append("cluster,#users,lambda,score,mscore,nscore,pscore"+ "\n");
+
+				pw.append(cluster+","+users_groups.size()+","+ estimatedlambda+","+sumscore+","+sum_mscore+","+sum_nscore+","+sum_pscore+",");
+
+				int index=0;
+				for(int c: attackcount)
+				{
+					pw.append(c+"");
+					if(index<(attackcount.length-1))
+					{
+						pw.append(",");
+					}
+
+					index++;
+				}
+				pw.append("\n");
+
+				pw.close();
+			}
+			catch(Exception ex)
+			{
+				System.out.println(" ");
+			}
+
+		}
+
+		// for each of the user groups compute lambda
+
+
+	}
+
+	private static void printAttackFreq(HashMap<String, int[]> attackfrequency) {
+		
+		
+		for(String key: attackfrequency.keySet())
+		{
+			System.out.print(key+ " : ");
+			for(int a: attackfrequency.get(key))
+			{
+				System.out.print(a + ", ");
+			}
+			System.out.println();
+		}
+		
+		
+		
+	}
+
+	private static int[][] createGamePlay(ArrayList<String> users_refined, ArrayList<ArrayList<String>> data_refined, int roundlimit) {
+
+
+		int[][] gameplay = new int[users_refined.size()][2*roundlimit]; 
+		int usercount = 0;
+		for(String user_id: users_refined)
+		{
+			for(ArrayList<String> example: data_refined)
+			{
+				// get user id
+				String tmpuser = example.get(Headers_minimum.user_id.getValue());
+				// if example is for user_id
+				if(user_id.equals(tmpuser))
+				{
+					//int gameins = Integer.parseInt(example.get(Headers_minimum.game_instance.getValue()));
+					int round = Integer.parseInt(example.get(Headers_minimum.round.getValue()));
+					if(round <= roundlimit)
+					{
+
+						String attackeraction = example.get(Headers_minimum.attacker_action.getValue());
+						String defenderaction = example.get(Headers_minimum.defender_action.getValue());
+
+						if(attackeraction.equals(" ") || attackeraction.equals(""))
+						{
+							attackeraction = "5";
+						}
+						int attackaction = Integer.parseInt(attackeraction);
+						int defendaction = Integer.parseInt(defenderaction);
+
+
+						int defround = 2*(round-1)  ;
+						int attackround = 2*(round-1)+1 ;
+
+
+						gameplay[usercount][defround] = defendaction;
+						gameplay[usercount][attackround] = attackaction; // in data round starts from 1. so use round-1
+					}
+
+				}
+
+			}
+			usercount++;
+		}
+		return gameplay;
+	}
+
+	private static HashMap<String, int[]> getAttackCountInData(int[][] gameplay, int numberofnodes, int roundlimit)
+	{
+
+		HashMap<String, int[]> attackfrequency = new HashMap<String, int[]>();
+		for(int r=0; r<roundlimit; r++)
+		{
+			/**
+			 * just count number times attacker attacked different nodes in index=1
+			 */
+
+			int kk=1;
+
+			if(r==0) // round 0
+			{
+				String key = "EMPTY EMPTY";
+				int[] tmpfreq = new int[numberofnodes];
+				for(int[] play: gameplay)
+				{
+					tmpfreq[play[1]]++;
+				}
+				attackfrequency.put(key, tmpfreq);
+			}
+			else
+			{
+				HashMap<String, int[]> tmp_attackfrequency = new HashMap<String, int[]>();
+				for(int i=0; i<numberofnodes; i++)
+				{
+					for(int j=0; j<numberofnodes; j++)
+					{
+						// for every pre-existing key, add i and j 
+						// create new key and count the frequency
+
+
+						if(r==1) // for round 1
+						{
+							String key = i + " " + j;
+							int[] tmpfreq = computeFreq(key, r, gameplay, numberofnodes);
+							attackfrequency.put(key, tmpfreq);
+						}
+						else if(r>1)
+						{
+
+
+							
+
+							for(String preexistingkey: attackfrequency.keySet())
+							{
+
+
+								if(!preexistingkey.equals("EMPTY EMPTY"))
+								{
+									String[] keys = preexistingkey.split(" ");
+									
+									String[] p0actions = keys[0].split(",");
+									
+									
+									if(p0actions.length == (r-1)) // we want add actions only to the sequence for last round
+									{
+
+										String p0key = keys[0]+","+i;
+										String p1key = keys[1]+","+j;
+										String key = p0key + " " + p1key;
+										int[] tmpfreq = computeFreq(key, r, gameplay, numberofnodes);
+										tmp_attackfrequency.put(key, tmpfreq);
+									}
+								}
+							}
+							
+						}
+					}
+				}
+				
+				for(String key: tmp_attackfrequency.keySet())
+				{
+					attackfrequency.put(key, tmp_attackfrequency.get(key));
+				}
+			}
+		}
+		return attackfrequency;
+	}
+
+	private static int[] computeFreq(String key, int r, int[][] gameplay, int nactions) {
+
+		// split the string
+
+		String[] keys = key.split(" ");
+
+
+		int freq[] = new int[nactions];
+
+
+		String[] defactions = keys[0].split(",");
+		String[] attactions = keys[1].split(",");
+
+
+
+		for(int[] play: gameplay)
+		{
+			boolean flag = true;
+			for(int cur_round=0; cur_round<r; cur_round++)
+			{
+
+				int defround = 2*cur_round;
+				int attround = 2*(cur_round)+1;
+
+				if( (Integer.parseInt(defactions[cur_round]) != play[defround]) || (Integer.parseInt(attactions[cur_round]) != play[attround]))
+				{
+					flag = false;
+					break;
+				}
+			}
+			if(flag)
+			{
+				int action = play[2*r+1]; // aciton in rth round
+				freq[action]++; // increase the frequency
+			}
+		}
+
+
+
+		//int p=1;
+
+		return freq;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
