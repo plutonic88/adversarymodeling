@@ -48,7 +48,7 @@ public class EquationGenerator {
 		HashMap<String, Double> probs = strategy.get(key);
 
 
-		//printMatLabCodeQRETest(ISets, root, naction);
+		printMatLabCodeQRETest(ISets, root, naction);
 
 
 
@@ -1371,7 +1371,7 @@ public class EquationGenerator {
 
 	}
 
-	private static void printISets(HashMap<String,InfoSet> iSets) 
+	public static void printISets(HashMap<String,InfoSet> iSets) 
 	{
 
 		for(InfoSet iset: iSets.values())
@@ -1397,7 +1397,7 @@ public class EquationGenerator {
 
 	}
 
-	private static HashMap<String, InfoSet> prepareInfoSet(HashMap<String, ArrayList<DNode>> I) {
+	public static HashMap<String, InfoSet> prepareInfoSet(HashMap<String, ArrayList<DNode>> I) {
 
 
 		HashMap<String, InfoSet> isets = new HashMap<String, InfoSet>();
@@ -1451,8 +1451,8 @@ public class EquationGenerator {
 					obj.qre_prob.put(child.nodeid, is+"_"+child.prevaction);
 					obj.qre_var.put(child.nodeid, "x("+InfoSet.varcount+")");
 
-					obj.qre_prob_val.put(child.nodeid, 0.5);
-					obj.qre_var_val.put(child.nodeid, 0.5);
+					//obj.qre_prob_val.put(child.nodeid, 0.5);
+					//obj.qre_var_val.put(child.nodeid, 0.5);
 
 
 
@@ -1474,8 +1474,8 @@ public class EquationGenerator {
 							obj.qre_prob.put(child.nodeid, is+"_"+child.prevaction);
 							obj.qre_var.put(child.nodeid, "x("+InfoSet.varcount+")");
 
-							obj.qre_prob_val.put(child.nodeid, 0.5);
-							obj.qre_var_val.put(child.nodeid, 0.5);
+							//obj.qre_prob_val.put(child.nodeid, 0.5);
+							//obj.qre_var_val.put(child.nodeid, 0.5);
 						}
 
 					}
@@ -2021,7 +2021,7 @@ public class EquationGenerator {
 	}
 
 
-	private static void printInfoSet(HashMap<String, ArrayList<DNode>> I) 
+	public static void printInfoSet(HashMap<String, ArrayList<DNode>> I) 
 	{
 		System.out.println();
 		for(String infset: I.keySet())
@@ -2038,7 +2038,7 @@ public class EquationGenerator {
 
 	}
 
-	private static HashMap<String, ArrayList<DNode>> prepareInformationSets(DNode root, int DEPTH_LIMIT, int naction) {
+	public static HashMap<String, ArrayList<DNode>> prepareInformationSets(DNode root, int DEPTH_LIMIT, int naction) {
 
 
 		HashMap<String, ArrayList<DNode>> I = new HashMap<String, ArrayList<DNode>>();
@@ -2175,7 +2175,7 @@ public class EquationGenerator {
 
 		for(int action =0; action<naction; action++)
 		{
-			DNode child = new DNode(treenodecount, depth, node.player^1);
+			DNode child = new DNode(treenodecount, depth+1, node.player^1);
 			treenodecount++;
 			child.parent = node;
 			child.prevaction = action;
@@ -2356,7 +2356,7 @@ public class EquationGenerator {
 		return defpoints;
 	}
 
-	public static HashMap<String, InfoSet> buildGameTree(int DEPTH_LIMIT, int naction) {
+	public static DNode buildGameTree(int DEPTH_LIMIT, int naction) {
 		
 		
 		
@@ -2367,18 +2367,17 @@ public class EquationGenerator {
 		System.out.println("Node id "+ root.nodeid + ", parent : "+ null + ", player "+ 0);
 		System.out.println();
 		printTree(root, naction);
-		HashMap<String, ArrayList<DNode>> I = prepareInformationSets(root, DEPTH_LIMIT, naction);
-		printInfoSet(I);
-
-		HashMap<String, InfoSet> ISets = prepareInfoSet(I);
-
-		printISets(ISets);
 		
-		return ISets;
+		
+		return root;
 		
 	}
 
-	public static void computeAttackerBestResponse(HashMap<String, InfoSet> isets, HashMap<String, int[]> attackfrequency, int naction, HashMap<String,HashMap<String,Double>> defstrategy) 
+	
+	
+	
+	public static void computeAttackerBestResponse(HashMap<String, InfoSet> isets, HashMap<String, int[]> attackfrequency, int naction,
+			HashMap<String,HashMap<String,Double>> defstrategy, DNode root, int depthlimit, HashMap<Integer,ArrayList<String>> depthinfoset, double lambda) throws Exception 
 	{
 		
 		
@@ -2393,7 +2392,229 @@ public class EquationGenerator {
 		
 		
 		
-		HashMap<String, String> container = new HashMap<String, String>();
+		
+		/**
+		 * 1. for all information set in a depth compute attacker best response
+		 * 2. 
+		 * 
+		 */
+		
+		for(int depth=depthlimit-1; depth>0; depth -=2)
+		{
+			System.out.println("depth "+ depth);
+			
+			
+			for(String isetname: depthinfoset.get(depth))
+			{
+				System.out.println("iset : "+ isetname);
+				InfoSet iset = isets.get(isetname);
+				
+				/**
+				 * now compute the sequence to reach the information set of defender
+				 */
+				
+				/**
+				 * find the information set of defender that led to iset
+				 * 
+				 * find a parent node pnode
+				 * 
+				 * find the infoset of the pnode 
+				 */
+				
+				DNode parentnode = iset.nodes.get(0).parent;
+				
+				
+				
+				String parentisetname = parentnode.infoset;
+				
+				System.out.println("parent iset "+ parentisetname);
+				
+				
+				InfoSet parentiset = isets.get(parentisetname);
+				
+				
+				/**
+				 * now find the sequence that led to parentiset
+				 */
+				
+				System.out.println(parentisetname+ " probs : ");
+				for(Integer a: parentiset.qre_prob_val.keySet())
+				{
+					System.out.println(a+" : "+ parentiset.qre_prob_val.get(a));
+				}
+				
+				
+				/**
+				 * now compute expected utiilty for attacker for playing every action using reward for the child nodes
+				 */
+				
+				/**
+				 * for every action of attacker in every node compute the expected utility
+				 */
+				
+				HashMap<Integer, Double> attackerexputility = new HashMap<Integer, Double>();
+				double sumexputility = 0; // sum of exponent of utility
+				
+				for(int action=0; action<naction; action++)
+				{
+					
+					double sumexpval = 0;
+					
+					System.out.println("action "+ action);
+					
+					for(DNode infnode: iset.nodes)
+					{
+						
+						/**
+						 * get the defender prob
+						 */
+						
+						System.out.println("Node  "+ infnode.nodeid);
+						
+						double defprob = parentiset.qre_prob_val.get(infnode.prevaction);
+						
+						System.out.println("def prob  "+ defprob);
+						/**
+						 * get attacker utility
+						 */
+						// get the child node for playing action
+						
+						DNode child = infnode.child.get(action);
+						
+						System.out.println("child node  "+ child.nodeid);
+						
+						
+						double attutility = child.attacker_reward;
+						
+						
+						System.out.println("attutility  "+ attutility);
+						
+						
+						double tmpattackexputility = defprob*attutility;
+						
+						
+						System.out.println("tmpattackexputility  "+ tmpattackexputility);
+						
+						sumexpval += tmpattackexputility;
+						
+						System.out.println("sumexpval  "+ sumexpval);
+						
+						
+					}
+					
+					sumexputility += Math.exp(lambda*sumexpval);
+					
+					System.out.println("sumexputility  "+ sumexputility);
+					
+					attackerexputility.put(action, sumexpval);
+					
+				}
+				
+				
+				/**
+				 * now compute the Q-BR
+				 */
+				
+				HashMap<Integer, Double> qbr = new HashMap<Integer, Double>();
+				
+				
+				double sumqbr = 0.0;
+				
+				for(int action=0; action<naction; action++)
+				{
+					double tmpqbr = Math.exp(lambda*attackerexputility.get(action)) /sumexputility;
+					sumqbr += tmpqbr;
+					
+					System.out.println("action  "+ action + " , qbr "+ tmpqbr);
+					qbr.put(action, tmpqbr);
+				}
+				
+				System.out.println("sum qbr  "+ Math.round(sumqbr * 100.0) / 100.0);
+				
+				
+				/**
+				 * update the attacker strategy
+				 */
+				
+				for(int action=0; action<naction; action++)
+				{
+					iset.qre_prob_val.put(action, qbr.get(action));
+					
+				}
+				
+				
+				
+				/**
+				 * now propagate the expected values to upwards
+				 * 
+				 * 
+				 * 1. For every node of attacker compute the expected utility and update the node's atatcker utility
+				 * 2. for defender information set compute the expected utlity for attacker
+				 * 
+				 */
+				System.out.println("iset "+ iset.id);
+				for(DNode node: iset.nodes)
+				{
+					double exp = 0;
+					for(int action=0; action<naction; action++)
+					{
+						DNode child = node.child.get(action);
+						
+						double attut = iset.qre_prob_val.get(action)*child.attacker_reward;
+						exp += attut;
+					}
+					System.out.println("node "+ node.nodeid + ", att_reward " + exp);
+					node.attacker_reward = exp;
+				}
+				
+				
+				// now update the reward for the defender's infoset's node's attacker reward
+				System.out.println("updating parent info set "+ parentiset.id+" node with attacker reward");
+				for(DNode node: parentiset.nodes)
+				{
+					double exp = 0;
+					for(int action=0; action<naction; action++)
+					{
+						System.out.println("action "+ action);
+						
+						DNode child = node.child.get(action);
+						
+						System.out.println("child node "+ node.nodeid + ", att_reward " + child.attacker_reward);
+						
+						
+						System.out.println("parentiset.qre_prob_val "+ parentiset.qre_prob_val.get(action));
+						
+						double attut = parentiset.qre_prob_val.get(action)*child.attacker_reward;
+						
+						//System.out.println("attut "+ attut);
+						exp += attut;
+						System.out.println("exp "+ exp);
+					}
+					System.out.println("node "+ node.nodeid + ", att_reward " + exp);
+					node.attacker_reward = exp;
+				}
+				System.out.println();
+				int p=1;
+				
+					
+			}
+			
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		/*HashMap<String, String> container = new HashMap<String, String>();
 		for(String isetname: keyset)
 		{
 
@@ -2403,9 +2624,9 @@ public class EquationGenerator {
 			if(iset.player==1 && iset.depth>0)
 			{
 
-				/*
+				
 			ArrayList<String> doneprobs = new ArrayList<String>();
-				 */
+				 
 				// find the history of any node
 
 				DNode node = iset.nodes.get(0);
@@ -2451,7 +2672,7 @@ public class EquationGenerator {
 			
 
 
-			/*for(Integer nodeid: iset.qre_var.keySet())
+			for(Integer nodeid: iset.qre_var.keySet())
 			{
 
 
@@ -2466,11 +2687,256 @@ public class EquationGenerator {
 
 
 
-			}*/
-		}
+			}
+		}*/
 		
 		
 	}
+
+	public static void updateTreeWithDefStartegy(HashMap<String, InfoSet> isets, DNode root, HashMap<String, HashMap<String, Double>> strategy, int naction) 
+	{
+		
+		String[] keyset = new String[isets.size()];
+		int indx=0;
+
+		for(String is: isets.keySet())
+		{
+			keyset[indx++] = is;
+		}
+		Arrays.sort(keyset);
+		
+		
+		
+		for(String isetname: keyset)
+		{
+			
+			InfoSet iset = isets.get(isetname);
+			// for every info set
+			/**
+			 * 1. find the history of attackere and defender
+			 */
+			if(iset.player==0)
+			{
+
+				
+				// find the history of any node
+				System.out.println("infoset "+ isetname);
+				DNode node = iset.nodes.get(0);
+				DNode child = null;
+				for(DNode ch: node.child.values())
+				{
+					child= ch;
+					break;
+				}
+
+				String histp1 = "";
+				String histp0 = "";
+
+				DNode tmp = node;
+				
+				int pl = 1; // player of previous node.parent
+
+				while(tmp != null && tmp.nodeid != 0)
+				{
+					
+					if(pl==0)
+					{
+						histp0  = (tmp.prevaction)+"," + histp0;
+					}
+					else
+					{
+						histp1 = (tmp.prevaction)+"," + histp1;
+					}
+					tmp = tmp.parent;
+					pl = pl^1;
+				}
+
+				System.out.println(isetname + " hist : "+ histp0 + " "+ histp1 );
+				
+				
+				
+				
+				
+				String key = histp0 +" "+histp1;
+				//String value = iset.qre_var.get(child.nodeid);
+				
+				if(key.equals(" "))
+				{
+					key = "EMPTY EMPTY";
+				}
+				else
+				{
+					histp0 = histp0.substring(0, histp0.length()-1);
+					histp1 = histp1.substring(0, histp1.length()-1);
+					key = histp0 +" "+histp1;
+					
+				}
+				
+				
+				
+				
+				
+				HashMap<String, Double> defstrat = new HashMap<String, Double>();
+				
+				if(strategy.containsKey(key))
+				{
+					defstrat = strategy.get(key);
+				}
+				else
+				{
+					for(int i=0; i<naction; i++)
+					{
+						if(i==0)
+							defstrat.put(String.valueOf(i), 1.0);
+						else
+							defstrat.put(String.valueOf(i), 0.0);
+							
+					}
+				}
+				
+				
+				
+				for(DNode ch : iset.nodes) // here we assume that defender information sets have only one node
+				{
+					
+					
+					for(int ac=0; ac<naction; ac++)
+					{
+						String action = ac+"";
+						double prob = 0;
+						if(defstrat.containsKey(action))
+						{
+							prob = defstrat.get(action);
+							
+						}
+						iset.qre_prob_val.put(ac, prob);
+						System.out.println("Setting prob "+ prob + " for action "+ action);
+						
+					}
+					int z=1;
+				}
+
+
+				
+			}
+			
+			
+		}
+		
+	}
+
+	public static HashMap<String, Double[]> prepareAttackerStrategy(HashMap<Integer, ArrayList<String>> depthinfoset, HashMap<String, InfoSet> isets, int naction) throws Exception 
+	{
+		
+		
+		HashMap<String, Double[]> attstrat = new HashMap<String, Double[]>();
+		
+		
+		for(ArrayList<String> depthisets: depthinfoset.values())
+		{
+			
+			
+			
+			for(String isetname: depthisets)
+			{
+				
+				Double strat [] = new Double[naction];
+				InfoSet iset = isets.get(isetname);
+				
+				// get the history
+				
+				//System.out.println("infoset "+ isetname);
+				DNode node = iset.nodes.get(0);
+				DNode child = null;
+				for(DNode ch: node.child.values())
+				{
+					child= ch;
+					break;
+				}
+
+				String histp1 = "";
+				String histp0 = "";
+
+				DNode tmp = node.parent;
+				
+				int pl = 1;
+
+				while(tmp != null && tmp.nodeid != 0)
+				{
+					
+					if(pl==0)
+					{
+						histp0 = (tmp.prevaction)+"," + histp0;
+					}
+					else
+					{
+						histp1 = (tmp.prevaction)+"," + histp1;
+					}
+					tmp = tmp.parent;
+					pl = pl^1;
+				}
+
+				//System.out.println(isetname + " hist : "+ histp0 + " "+ histp1 );
+				
+				
+				
+				
+				
+				String key = histp0 +" "+histp1;
+				//String value = iset.qre_var.get(child.nodeid);
+				
+				if(key.equals(" ") || histp1.equals(""))
+				{
+					key = "EMPTY EMPTY";
+				}
+				else
+				{
+					histp0 = histp0.substring(0, histp0.length()-1);
+					histp1 = histp1.substring(0, histp1.length()-1);
+					key = histp0 +" "+histp1;
+					
+				}
+				
+				
+				//System.out.println("key " + key );
+				
+				double sum = 0.0;
+				
+				
+				
+				System.out.println("infoset "+ iset.id + ", seq "+ key + ", att_strat : ");
+				for(int a=0; a<naction; a++)
+				{
+					double prob = iset.qre_prob_val.get(a);
+					strat[a] = prob;
+					System.out.println("action " + a + ", prob " + prob);
+					sum += prob;
+				}
+				
+				
+				//System.out.println("prob sum " + Math.round(sum * 100.0) / 100.0);
+				
+				attstrat.put(key, strat);
+				
+				
+				
+				
+				if(sum<(1.0-0.0001))
+				{
+					throw new Exception("Attacker strategy prob sum "+ sum);
+				}
+				
+				
+				
+				
+			}
+		}
+		
+		return attstrat;
+		
+	}
+	
+	
 
 
 }
@@ -2518,12 +2984,17 @@ class DNode {
 	public DNode parent;
 	public boolean leaf;
 	public int defender_reward;
-	public int attacker_reward;
+	public double attacker_reward;
 	int prevaction = -1;
 	String infoset;
 
 	public HashMap<Integer, DNode> child = new HashMap<Integer, DNode>();
 
+	
+	public DNode() {
+		super();
+		
+	}
 
 	public DNode(int nodeid, int depth, int player) {
 		super();

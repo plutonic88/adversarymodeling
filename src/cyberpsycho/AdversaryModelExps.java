@@ -2430,9 +2430,10 @@ public class AdversaryModelExps {
 	/**
 	 * 1. groups users
 	 * 2. estimate lambda based on different groups
+	 * @throws Exception 
 	 * 
 	 */
-	public static void computeLambda() {
+	public static void computeLambda() throws Exception {
 
 
 		int k= 3; // how many clusters you want
@@ -2510,48 +2511,77 @@ public class AdversaryModelExps {
 
 
 			int[][] gameplay = createGamePlay(users_groups, data_refined, 5);
-			int attackcount[] = getAttackFrequency(users_groups, data_refined, numberofnodes);
+			//int attackcount[] = getAttackFrequency(users_groups, data_refined, numberofnodes);
 			HashMap<String, int[]> attackfrequency = getAttackCountInData(gameplay, numberofnodes, 5);
-			
-			
+
+
 			//printAttackFreq(attackfrequency);
-			
-			
-			
+
+
+
 			// now compute the best response in the tree
-			
+
 			int DEPTH_LIMIT = 4;
 			int naction = 6;
+			double lambda = 5;
+
+
+
+
 			
-			HashMap<String, InfoSet> Isets = EquationGenerator.buildGameTree(DEPTH_LIMIT, naction);
-			
+			DNode root = EquationGenerator.buildGameTree(DEPTH_LIMIT, naction);
+			HashMap<String, ArrayList<DNode>> I = EquationGenerator.prepareInformationSets(root, DEPTH_LIMIT, naction);
+			EquationGenerator.printInfoSet(I);
+			HashMap<String, InfoSet> isets = EquationGenerator.prepareInfoSet(I);
+			/**
+			 * compute information sets according to depth
+			 */
+			HashMap<Integer, ArrayList<String>> depthinfoset = depthInfoSet(DEPTH_LIMIT, isets,1); // for player 1: attacker, player 0 is defender
+			EquationGenerator.printISets(isets);
 			HashMap<String, HashMap<String, Double>> strategy = Data.readStrategy("g5d5_FI.txt");
 			
-			EquationGenerator.computeAttackerBestResponse(Isets, attackfrequency, naction, strategy);
+			EquationGenerator.updateTreeWithDefStartegy(isets, root, strategy, naction);
+			EquationGenerator.computeAttackerBestResponse(isets, attackfrequency, naction, strategy, root, DEPTH_LIMIT, depthinfoset, lambda);
 
 			
 			
 			
+			/**
+			 * print attacker strategy for different information sets and sequences
+			 */
+			
+			
+			HashMap<String, Double[]> attackstartegy = EquationGenerator.prepareAttackerStrategy(depthinfoset, isets, naction);
 			
 			
 			
 			
+			int p =1;
 			
 			
 			
-			
-			
-			
-			
-			
-			
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 			int sumattackcoutn = 0;
 
-			for(int c: attackcount)
+			/*for(int c: attackcount)
 			{
 				sumattackcoutn += c;
-			}
+			}*/
 
 
 			HashMap<String, Integer> att_game_play = buildOneStageGamePlay(users_groups, data_refined, 1);
@@ -2560,7 +2590,7 @@ public class AdversaryModelExps {
 
 			//printOneStageGamePlay(att_game_play);
 
-			
+
 			String key = "EMPTY EMPTY"; 
 			HashMap<String, Double> probs = strategy.get(key);
 
@@ -2619,7 +2649,7 @@ public class AdversaryModelExps {
 				pw.append(cluster+","+users_groups.size()+","+ estimatedlambda+","+sumscore+","+sum_mscore+","+sum_nscore+","+sum_pscore+",");
 
 				int index=0;
-				for(int c: attackcount)
+				/*for(int c: attackcount)
 				{
 					pw.append(c+"");
 					if(index<(attackcount.length-1))
@@ -2628,7 +2658,7 @@ public class AdversaryModelExps {
 					}
 
 					index++;
-				}
+				}*/
 				pw.append("\n");
 
 				pw.close();
@@ -2645,9 +2675,36 @@ public class AdversaryModelExps {
 
 	}
 
+	private static HashMap<Integer, ArrayList<String>> depthInfoSet(int dEPTH_LIMIT, HashMap<String, InfoSet> isets, int player) {
+		
+		
+		HashMap<Integer, ArrayList<String>> depthinfset = new HashMap<Integer, ArrayList<String>>();
+		
+		
+		for(int depth = 1; depth<=dEPTH_LIMIT; depth+=2)
+		{
+			
+			ArrayList<String> ists = new ArrayList<String>();
+			
+			for(InfoSet iset: isets.values())
+			{
+				if(iset.depth==depth && iset.player==player)
+				{
+					ists.add(iset.id);
+				}
+			}
+			
+			depthinfset.put(depth, ists);
+			
+		}
+		
+		
+		return depthinfset;
+	}
+
 	private static void printAttackFreq(HashMap<String, int[]> attackfrequency) {
-		
-		
+
+
 		for(String key: attackfrequency.keySet())
 		{
 			System.out.print(key+ " : ");
@@ -2657,9 +2714,9 @@ public class AdversaryModelExps {
 			}
 			System.out.println();
 		}
-		
-		
-		
+
+
+
 	}
 
 	private static int[][] createGamePlay(ArrayList<String> users_refined, ArrayList<ArrayList<String>> data_refined, int roundlimit) {
@@ -2751,7 +2808,7 @@ public class AdversaryModelExps {
 						{
 
 
-							
+
 
 							for(String preexistingkey: attackfrequency.keySet())
 							{
@@ -2760,10 +2817,10 @@ public class AdversaryModelExps {
 								if(!preexistingkey.equals("EMPTY EMPTY"))
 								{
 									String[] keys = preexistingkey.split(" ");
-									
+
 									String[] p0actions = keys[0].split(",");
-									
-									
+
+
 									if(p0actions.length == (r-1)) // we want add actions only to the sequence for last round
 									{
 
@@ -2775,11 +2832,11 @@ public class AdversaryModelExps {
 									}
 								}
 							}
-							
+
 						}
 					}
 				}
-				
+
 				for(String key: tmp_attackfrequency.keySet())
 				{
 					attackfrequency.put(key, tmp_attackfrequency.get(key));
