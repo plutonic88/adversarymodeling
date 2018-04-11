@@ -11,10 +11,6 @@ import java.util.Random;
 import cs.Interval.contraction.SecurityGameContraction;
 import cs.Interval.contraction.TargetNode;
 import cyberpsycho.Data.Headers_minimum;
-
-
-
-
 import games.EmpiricalMatrixGame;
 import games.MatrixGame;
 import games.MixedStrategy;
@@ -22,6 +18,7 @@ import games.OutcomeDistribution;
 import games.OutcomeIterator;
 import groupingtargets.ClusterTargets;
 import kmeans.KmeanClustering;
+import kmeans.Weka;
 import matlabcontrol.MatlabConnectionException;
 import matlabcontrol.MatlabInvocationException;
 import matlabcontrol.MatlabProxy;
@@ -2463,11 +2460,11 @@ public class AdversaryModelExps {
 
 
 
-		//List<Integer>[] clusters = Weka.clusterUsers(k,normalizedexamples);
+		List<Integer>[] clusters = Weka.clusterUsers(k,normalizedexamples);
 
 
 
-		List<Integer>[] clusters = KmeanClustering.clusterUsersV2(k, normalizedexamples);
+		//List<Integer>[] clusters = KmeanClustering.clusterUsersV2(k, normalizedexamples);
 
 
 		printClustersInt(clusters);
@@ -2497,6 +2494,9 @@ public class AdversaryModelExps {
 		{
 			System.out.println(" ");
 		}
+		
+		
+		
 
 		for(int cluster=0; cluster<k; cluster++)
 		{
@@ -2511,7 +2511,7 @@ public class AdversaryModelExps {
 
 
 			int[][] gameplay = createGamePlay(users_groups, data_refined, 5);
-			//int attackcount[] = getAttackFrequency(users_groups, data_refined, numberofnodes);
+			int attackcount[] = getAttackFrequency(users_groups, data_refined, numberofnodes);
 			HashMap<String, int[]> attackfrequency = getAttackCountInData(gameplay, numberofnodes, 5);
 
 
@@ -2521,9 +2521,12 @@ public class AdversaryModelExps {
 
 			// now compute the best response in the tree
 
-			int DEPTH_LIMIT = 4;
+			int DEPTH_LIMIT = 4; // needs to be 10 for our experiment
 			int naction = 6;
-			double lambda = 5;
+			int minlambda = 0;
+			int maxlambda = 5;
+			double step = .2;
+			double[] lambda = generateLambdaArray(minlambda, maxlambda, step);
 
 
 
@@ -2541,17 +2544,20 @@ public class AdversaryModelExps {
 			HashMap<String, HashMap<String, Double>> strategy = Data.readStrategy("g5d5_FI.txt");
 			
 			EquationGenerator.updateTreeWithDefStartegy(isets, root, strategy, naction);
-			EquationGenerator.computeAttackerBestResponse(isets, attackfrequency, naction, strategy, root, DEPTH_LIMIT, depthinfoset, lambda);
-
 			
 			
 			
-			/**
-			 * print attacker strategy for different information sets and sequences
-			 */
+			//double estimatedlambda = estimateLambda(lambda, isets, attackfrequency, naction, strategy, root, DEPTH_LIMIT, depthinfoset, step);
+			
+			double estimatedlambdanaive = estimateLambdaNaive(lambda, isets, attackfrequency, naction, strategy, root, DEPTH_LIMIT, depthinfoset, step);
+			
+			System.out.println("Estmiated lambda "+ estimatedlambdanaive);
 			
 			
-			HashMap<String, Double[]> attackstartegy = EquationGenerator.prepareAttackerStrategy(depthinfoset, isets, naction);
+			
+			
+			
+			// use attackstrategy to compute lambda
 			
 			
 			
@@ -2559,53 +2565,15 @@ public class AdversaryModelExps {
 			int p =1;
 			
 			
-			
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 			int sumattackcoutn = 0;
 
-			/*for(int c: attackcount)
+			for(int c: attackcount)
 			{
 				sumattackcoutn += c;
-			}*/
+			}
 
 
-			HashMap<String, Integer> att_game_play = buildOneStageGamePlay(users_groups, data_refined, 1);
-			//HashMap<String, int[][]> def_game_play = buildGamePlay(users_refined, data_refined, 0);
-			//HashMap<String, int[][]> reward = buildGameRewards(users_refined, data_refined);
-
-			//printOneStageGamePlay(att_game_play);
-
-
-			String key = "EMPTY EMPTY"; 
-			HashMap<String, Double> probs = strategy.get(key);
-
-
-
-
-
-			//int x=0;
-
-			double estimatedlambda = 0;//EquationGenerator.estimateLambda(strategy, numberofnodes);
-
-			//Disconnect the proxy from MATLAB
-			//proxy.disconnect();
-
-
+			
 
 			double sumscore = 0;
 
@@ -2637,7 +2605,7 @@ public class AdversaryModelExps {
 
 
 
-			System.out.println("Cluster "+cluster+", user count "+users_groups.size()+", lambda "+ estimatedlambda);
+			System.out.println("Cluster "+cluster+", user count "+users_groups.size()+", lambda "+ estimatedlambdanaive);
 
 
 			try
@@ -2646,10 +2614,10 @@ public class AdversaryModelExps {
 
 				//pw.append("cluster,#users,lambda,score,mscore,nscore,pscore"+ "\n");
 
-				pw.append(cluster+","+users_groups.size()+","+ estimatedlambda+","+sumscore+","+sum_mscore+","+sum_nscore+","+sum_pscore+",");
+				pw.append(cluster+","+users_groups.size()+","+ estimatedlambdanaive+","+sumscore+","+sum_mscore+","+sum_nscore+","+sum_pscore+",");
 
 				int index=0;
-				/*for(int c: attackcount)
+				for(int c: attackcount)
 				{
 					pw.append(c+"");
 					if(index<(attackcount.length-1))
@@ -2658,7 +2626,7 @@ public class AdversaryModelExps {
 					}
 
 					index++;
-				}*/
+				}
 				pw.append("\n");
 
 				pw.close();
@@ -2668,11 +2636,181 @@ public class AdversaryModelExps {
 				System.out.println(" ");
 			}
 
+
+
+
 		}
 
 		// for each of the user groups compute lambda
 
 
+	}
+
+	private static double estimateLambdaNaive(double[] lambda, HashMap<String, InfoSet> isets,
+			HashMap<String, int[]> attackfrequency, int naction, HashMap<String, HashMap<String, Double>> strategy,
+			DNode root, int dEPTH_LIMIT, HashMap<Integer, ArrayList<String>> depthinfoset, double step) throws Exception {
+		
+		
+		
+		Double minllh = Double.MAX_VALUE;
+		double minlambda = -1;
+		
+		for(int i=0; i<lambda.length; i++)
+		{
+		
+			double llh = -likeHoodValue(isets, attackfrequency, naction, strategy, root, dEPTH_LIMIT, depthinfoset, lambda[i]);
+			
+			if(llh<minllh)
+			{
+				minllh = llh;
+				minlambda = lambda[i];
+			}
+		}
+		
+		
+		
+		
+		return minlambda;
+	}
+
+	private static double estimateLambda(double[] lambda, HashMap<String, InfoSet> isets,
+			HashMap<String, int[]> attackfrequency, int naction, HashMap<String, HashMap<String, Double>> strategy,
+			DNode root, int dEPTH_LIMIT, HashMap<Integer, ArrayList<String>> depthinfoset, double step) throws Exception {
+		
+		
+		
+		double low = 0;
+		double high = lambda.length-1;
+		
+		
+		double lowllh = 0;//likeHoodValue(isets, attackfrequency, naction, strategy, root, dEPTH_LIMIT, depthinfoset, low);
+		double highllh = 0;//likeHoodValue(isets, attackfrequency, naction, strategy, root, dEPTH_LIMIT, depthinfoset, high);
+		double midllh = 0;//likeHoodValue(isets, attackfrequency, naction, strategy, root, dEPTH_LIMIT, depthinfoset, mid);
+		
+		
+		
+		
+		while(low<=high)
+		{
+			double mid = (low+high)/2;
+			
+			System.out.println(" low "+ low + ", high "+ high + ", mid "+ mid);
+			
+			lowllh = likeHoodValue(isets, attackfrequency, naction, strategy, root, dEPTH_LIMIT, depthinfoset, low);
+			highllh = likeHoodValue(isets, attackfrequency, naction, strategy, root, dEPTH_LIMIT, depthinfoset, high);
+			midllh = likeHoodValue(isets, attackfrequency, naction, strategy, root, dEPTH_LIMIT, depthinfoset, mid);
+			
+			System.out.println(" lowllh "+ lowllh + ", highllh "+ highllh + ", midllh "+ midllh);
+			
+			
+			if(midllh > lowllh && midllh > highllh) // triangle
+			{
+				low = low - step;
+				high = high - step;
+				
+				System.out.println("midllh > lowllh && midllh > highllh.....true");
+				System.out.println(" low "+ low + ", high "+ high + ", mid "+ mid);
+				
+				
+			}
+			else if(lowllh < midllh)
+			{
+				low = mid + step;
+				System.out.println("lowllh < midllh.....true");
+				System.out.println(" low "+ low + ", high "+ high + ", mid "+ mid);
+			}
+			else if(highllh < midllh)
+			{
+				high = mid - step;
+				System.out.println("highllh < midllh.....true");
+				System.out.println(" low "+ low + ", high "+ high + ", mid "+ mid);
+			}
+			
+			
+		}
+		
+		return midllh;
+	}
+
+	private static double likeHoodValue(HashMap<String, InfoSet> isets, HashMap<String, int[]> attackfrequency,
+			int naction, HashMap<String, HashMap<String, Double>> strategy, DNode root, int dEPTH_LIMIT,
+			HashMap<Integer, ArrayList<String>> depthinfoset, double lambda) throws Exception {
+		
+		
+		System.out.println("*****************lambda = "+ lambda+"*******************\n");
+
+		EquationGenerator.computeAttackerBestResponse(isets, attackfrequency, naction, strategy, root, dEPTH_LIMIT, depthinfoset, lambda);
+		/**
+		 * print attacker strategy for different information sets and sequences
+		 */
+		HashMap<String, Double[]> attackstrategy = EquationGenerator.prepareAttackerStrategy(depthinfoset, isets, naction);
+		
+		
+		
+		double loglikelihhoodvalue = computeLogLikeliHoodValue(attackfrequency, attackstrategy, naction);
+		
+		System.out.println("*****************lambda = "+ lambda+"   llval "+loglikelihhoodvalue+"\n");
+		
+		
+		return loglikelihhoodvalue;
+	}
+
+	private static double[] generateLambdaArray(int minlambda, int maxlambda, double step) {
+		
+		
+		
+		int size = (int)Math.ceil((maxlambda-minlambda)/step);
+		double arr[] = new double[size];
+		arr[0] = 0;
+		
+		for(int i=1; i<size; i++)
+		{
+			arr[i] =  /*((arr[i-1])*100)/100*/ arr[i-1] +step;
+			
+			arr[i] = (arr[i]*100)/100;
+			
+		}
+		
+		
+	
+		
+		
+		return arr;
+	}
+
+	private static double computeLogLikeliHoodValue(HashMap<String, int[]> attackfrequency,
+			HashMap<String, Double[]> attackstrategy, int naction) throws Exception {
+		
+		
+		
+		double llvalsum = 0.0;
+		
+		for(String seq: attackstrategy.keySet())
+		{
+			System.out.println("seq : "+ seq + "\n");
+			if(attackfrequency.containsKey(seq))
+			{
+				int[] freq = attackfrequency.get(seq);
+				Double[] attstrtgy = attackstrategy.get(seq);
+				for(int a=0; a<naction; a++)
+				{
+					double tmpllval = freq[a]* Math.log(attstrtgy[a]);
+					System.out.println("llval : "+ tmpllval);
+					llvalsum += tmpllval;
+					
+				}
+				System.out.println("llvalsum : "+ llvalsum);
+			}
+			else
+			{
+				System.out.println("DOes not have the sequence");
+				//throw new Exception("DOes not have the sequence");
+			}
+		}
+		
+		
+		
+		return llvalsum;
 	}
 
 	private static HashMap<Integer, ArrayList<String>> depthInfoSet(int dEPTH_LIMIT, HashMap<String, InfoSet> isets, int player) {

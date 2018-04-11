@@ -2437,7 +2437,7 @@ public class EquationGenerator {
 				 * now find the sequence that led to parentiset
 				 */
 				
-				System.out.println(parentisetname+ " probs : ");
+				//System.out.println(parentisetname+ " probs : ");
 				for(Integer a: parentiset.qre_prob_val.keySet())
 				{
 					System.out.println(a+" : "+ parentiset.qre_prob_val.get(a));
@@ -2568,6 +2568,23 @@ public class EquationGenerator {
 				}
 				
 				
+				
+				for(DNode node: parentiset.nodes)
+				{
+					double exp = 0;
+					for(int action=0; action<naction; action++)
+					{
+						System.out.print("action "+ action + ", ");
+
+						DNode child = node.child.get(action);
+
+						System.out.println("child node "+ child.nodeid + ", att_reward " + child.attacker_reward);
+					}
+				}
+				
+				
+				
+				
 				// now update the reward for the defender's infoset's node's attacker reward
 				System.out.println("updating parent info set "+ parentiset.id+" node with attacker reward");
 				for(DNode node: parentiset.nodes)
@@ -2579,14 +2596,14 @@ public class EquationGenerator {
 						
 						DNode child = node.child.get(action);
 						
-						System.out.println("child node "+ node.nodeid + ", att_reward " + child.attacker_reward);
+						System.out.println("child node "+ child.nodeid + ", att_reward " + child.attacker_reward);
 						
 						
 						System.out.println("parentiset.qre_prob_val "+ parentiset.qre_prob_val.get(action));
 						
 						double attut = parentiset.qre_prob_val.get(action)*child.attacker_reward;
 						
-						//System.out.println("attut "+ attut);
+						System.out.println("attut "+ attut);
 						exp += attut;
 						System.out.println("exp "+ exp);
 					}
@@ -2594,7 +2611,7 @@ public class EquationGenerator {
 					node.attacker_reward = exp;
 				}
 				System.out.println();
-				int p=1;
+				//int p=1;
 				
 					
 			}
